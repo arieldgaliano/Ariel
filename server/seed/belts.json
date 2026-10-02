@@ -1,0 +1,278 @@
+[
+ {
+  "id": "infantil-blanco",
+  "name": "Blanco",
+  "group": "infantil",
+  "order": 1,
+  "color": "var(--belt-blanco)",
+  "minMonths": 0,
+  "classesRequired": 0,
+  "kyu": true
+ },
+ {
+  "id": "infantil-blanco-celeste",
+  "name": "Blanco punta celeste",
+  "group": "infantil",
+  "order": 2,
+  "color": "var(--belt-blanco)",
+  "tip": "var(--belt-celeste)",
+  "minMonths": 3,
+  "classesRequired": 12,
+  "kyu": true
+ },
+ {
+  "id": "infantil-celeste",
+  "name": "Celeste",
+  "group": "infantil",
+  "order": 3,
+  "color": "var(--belt-celeste)",
+  "minMonths": 4,
+  "classesRequired": 16,
+  "kyu": true
+ },
+ {
+  "id": "infantil-celeste-amarilla",
+  "name": "Celeste punta amarilla",
+  "group": "infantil",
+  "order": 4,
+  "color": "var(--belt-celeste)",
+  "tip": "var(--belt-amarillo)",
+  "minMonths": 3,
+  "classesRequired": 12,
+  "kyu": true
+ },
+ {
+  "id": "infantil-amarillo",
+  "name": "Amarillo",
+  "group": "infantil",
+  "order": 5,
+  "color": "var(--belt-amarillo)",
+  "minMonths": 4,
+  "classesRequired": 16,
+  "kyu": true
+ },
+ {
+  "id": "infantil-amarillo-naranja",
+  "name": "Amarillo punta naranja",
+  "group": "infantil",
+  "order": 6,
+  "color": "var(--belt-amarillo)",
+  "tip": "var(--belt-naranja)",
+  "minMonths": 3,
+  "classesRequired": 12,
+  "kyu": true
+ },
+ {
+  "id": "infantil-naranja",
+  "name": "Naranja",
+  "group": "infantil",
+  "order": 7,
+  "color": "var(--belt-naranja)",
+  "minMonths": 5,
+  "classesRequired": 20,
+  "kyu": true
+ },
+ {
+  "id": "infantil-verde",
+  "name": "Verde",
+  "group": "infantil",
+  "order": 8,
+  "color": "var(--belt-verde)",
+  "minMonths": 6,
+  "classesRequired": 24,
+  "kyu": true
+ },
+ {
+  "id": "infantil-azul",
+  "name": "Azul",
+  "group": "infantil",
+  "order": 9,
+  "color": "var(--belt-azul)",
+  "minMonths": 6,
+  "classesRequired": 24,
+  "kyu": true
+ },
+ {
+  "id": "infantil-marron",
+  "name": "Marrón",
+  "group": "infantil",
+  "order": 10,
+  "color": "var(--belt-marron)",
+  "minMonths": 8,
+  "classesRequired": 32,
+  "kyu": true
+ },
+ {
+  "id": "infantil-negro-junior",
+  "name": "Negro junior (punta blanca)",
+  "group": "infantil",
+  "order": 11,
+  "color": "var(--belt-negro)",
+  "tip": "var(--belt-blanco)",
+  "minMonths": 10,
+  "classesRequired": 40
+ },
+ {
+  "id": "adulto-blanco",
+  "name": "Blanco",
+  "group": "adulto",
+  "order": 1,
+  "color": "var(--belt-blanco)",
+  "minMonths": 0,
+  "classesRequired": 0,
+  "kyu": true
+ },
+ {
+  "id": "adulto-amarillo",
+  "name": "Amarillo",
+  "group": "adulto",
+  "order": 2,
+  "color": "var(--belt-amarillo)",
+  "minMonths": 6,
+  "classesRequired": 24,
+  "kyu": true
+ },
+ {
+  "id": "adulto-naranja",
+  "name": "Naranja",
+  "group": "adulto",
+  "order": 3,
+  "color": "var(--belt-naranja)",
+  "minMonths": 6,
+  "classesRequired": 24,
+  "kyu": true
+ },
+ {
+  "id": "adulto-verde",
+  "name": "Verde",
+  "group": "adulto",
+  "order": 4,
+  "color": "var(--belt-verde)",
+  "minMonths": 8,
+  "classesRequired": 32,
+  "kyu": true
+ },
+ {
+  "id": "adulto-azul",
+  "name": "Azul",
+  "group": "adulto",
+  "order": 5,
+  "color": "var(--belt-azul)",
+  "minMonths": 8,
+  "classesRequired": 32,
+  "kyu": true
+ },
+ {
+  "id": "adulto-marron",
+  "name": "Marrón",
+  "group": "adulto",
+  "order": 6,
+  "color": "var(--belt-marron)",
+  "minMonths": 12,
+  "classesRequired": 48,
+  "kyu": true
+ },
+ {
+  "id": "adulto-dan1",
+  "name": "Negro 1º Dan",
+  "group": "adulto",
+  "order": 7,
+  "color": "var(--belt-negro)",
+  "tip": "var(--belt-amarillo)",
+  "tipCount": 1,
+  "minMonths": 18,
+  "classesRequired": 60
+ },
+ {
+  "id": "adulto-dan2",
+  "name": "Negro 2º Dan",
+  "group": "adulto",
+  "order": 8,
+  "color": "var(--belt-negro)",
+  "tip": "var(--belt-amarillo)",
+  "tipCount": 2,
+  "minMonths": 24,
+  "classesRequired": 80
+ },
+ {
+  "id": "adulto-dan3",
+  "name": "Negro 3º Dan",
+  "group": "adulto",
+  "order": 9,
+  "color": "var(--belt-negro)",
+  "tip": "var(--belt-amarillo)",
+  "tipCount": 3,
+  "minMonths": 36,
+  "classesRequired": 100
+ },
+ {
+  "id": "adulto-dan4",
+  "name": "Negro 4º Dan",
+  "group": "adulto",
+  "order": 10,
+  "color": "var(--belt-negro)",
+  "tip": "var(--belt-amarillo)",
+  "tipCount": 4,
+  "minMonths": 48,
+  "classesRequired": 120
+ },
+ {
+  "id": "adulto-dan5",
+  "name": "Negro 5º Dan",
+  "group": "adulto",
+  "order": 11,
+  "color": "var(--belt-negro)",
+  "tip": "var(--belt-amarillo)",
+  "tipCount": 5,
+  "minMonths": 60,
+  "classesRequired": 140
+ },
+ {
+  "id": "adulto-dan6",
+  "name": "6º Dan",
+  "group": "adulto",
+  "order": 12,
+  "color": "var(--belt-rojo)",
+  "tip": "var(--belt-blanco)",
+  "minMonths": 72,
+  "classesRequired": 200
+ },
+ {
+  "id": "adulto-dan7",
+  "name": "7º Dan",
+  "group": "adulto",
+  "order": 13,
+  "color": "var(--belt-rojo)",
+  "tip": "var(--belt-blanco)",
+  "minMonths": 84,
+  "classesRequired": 220
+ },
+ {
+  "id": "adulto-dan8",
+  "name": "8º Dan",
+  "group": "adulto",
+  "order": 14,
+  "color": "var(--belt-rojo)",
+  "tip": "var(--belt-blanco)",
+  "minMonths": 96,
+  "classesRequired": 240
+ },
+ {
+  "id": "adulto-dan9",
+  "name": "9º Dan",
+  "group": "adulto",
+  "order": 15,
+  "color": "var(--belt-rojo)",
+  "minMonths": 120,
+  "classesRequired": 260
+ },
+ {
+  "id": "adulto-dan10",
+  "name": "10º Dan",
+  "group": "adulto",
+  "order": 16,
+  "color": "var(--belt-rojo)",
+  "minMonths": 144,
+  "classesRequired": 280
+ }
+]

@@ -1,0 +1,143 @@
+{
+ "infantil-blanco": [
+  "Postura básica (kiba dachi, zenkutsu dachi)",
+  "Golpe de puño: choku zuki",
+  "Bloqueo: gedan barai",
+  "Disciplina y saludo en el dojo"
+ ],
+ "infantil-blanco-celeste": [
+  "Repaso de posturas básicas",
+  "Coordinación de golpe y bloqueo",
+  "Conteo en japonés del 1 al 10",
+  "Kata: Taikyoku Shodan (introducción)"
+ ],
+ "infantil-celeste": [
+  "Patada frontal: mae geri",
+  "Bloqueo alto: age uke",
+  "Trabajo en pareja simple",
+  "Kata: Taikyoku Shodan"
+ ],
+ "infantil-celeste-amarilla": [
+  "Combinaciones de puño y patada",
+  "Equilibrio y caídas básicas",
+  "Kata: Pinan Shodan (introducción)"
+ ],
+ "infantil-amarillo": [
+  "Patada lateral: yoko geri",
+  "Bloqueo circular: uchi uke",
+  "Kata: Pinan Shodan"
+ ],
+ "infantil-amarillo-naranja": [
+  "Combinaciones de 3 movimientos",
+  "Trabajo de distancia (maai)",
+  "Kata: Pinan Nidan (introducción)"
+ ],
+ "infantil-naranja": [
+  "Patada circular: mawashi geri",
+  "Introducción a kumite acordado",
+  "Kata: Pinan Nidan"
+ ],
+ "infantil-verde": [
+  "Combinaciones de mano y pierna",
+  "Kumite acordado",
+  "Kata: Pinan Sandan"
+ ],
+ "infantil-azul": [
+  "Barridos básicos: ashi barai",
+  "Kumite semi-libre supervisado",
+  "Kata: Pinan Yondan"
+ ],
+ "infantil-marron": [
+  "Preparación para negro junior",
+  "Ayudantía en clases de blancos",
+  "Kata: Pinan Godan"
+ ],
+ "infantil-negro-junior": [
+  "Perfeccionamiento de katas de Pinan",
+  "Primeras nociones de bunkai",
+  "Kata: Naihanchi Shodan"
+ ],
+ "adulto-blanco": [
+  "Postura básica (kiba dachi, zenkutsu dachi)",
+  "Golpes de puño: choku zuki",
+  "Bloqueo: gedan barai",
+  "Kata: Taikyoku Shodan"
+ ],
+ "adulto-amarillo": [
+  "Patada frontal: mae geri",
+  "Bloqueo alto: age uke",
+  "Combinaciones de 3 movimientos",
+  "Kata: Pinan Shodan"
+ ],
+ "adulto-naranja": [
+  "Patada lateral: yoko geri",
+  "Bloqueo circular: uchi uke",
+  "Trabajo de distancia (maai)",
+  "Kata: Pinan Nidan"
+ ],
+ "adulto-verde": [
+  "Patada circular: mawashi geri",
+  "Combinaciones de mano y pierna",
+  "Introducción a kumite acordado",
+  "Kata: Pinan Sandan"
+ ],
+ "adulto-azul": [
+  "Barridos básicos: ashi barai",
+  "Contraataques en kumite",
+  "Trabajo de kata a doble velocidad",
+  "Kata: Pinan Yondan"
+ ],
+ "adulto-marron": [
+  "Preparación de examen a negro",
+  "Kumite libre controlado",
+  "Defensa personal básica",
+  "Kata: Pinan Godan"
+ ],
+ "adulto-dan1": [
+  "Perfeccionamiento de katas superiores",
+  "Enseñanza asistida de clase",
+  "Bunkai del Pinan Godan",
+  "Kata: Naihanchi Shodan"
+ ],
+ "adulto-dan2": [
+  "Profundización de bunkai",
+  "Asistencia de clase con mayor autonomía",
+  "Kata: Kusanku"
+ ],
+ "adulto-dan3": [
+  "Introducción a kobudo (armas tradicionales)",
+  "Formación pedagógica básica",
+  "Kata: Chinto"
+ ],
+ "adulto-dan4": [
+  "Formación de instructores",
+  "Preparación de mesas de examen de grados inferiores",
+  "Kata avanzado a elección"
+ ],
+ "adulto-dan5": [
+  "Investigación de kata y aplicación (bunkai avanzado)",
+  "Dirección de clase propia",
+  "Kata avanzado a elección"
+ ],
+ "adulto-dan6": [
+  "Rol de asesoramiento técnico del dojo",
+  "Transmisión de la tradición e historia del estilo",
+  "Evaluación de exámenes de grados inferiores"
+ ],
+ "adulto-dan7": [
+  "Rol de asesoramiento técnico del dojo",
+  "Transmisión de la tradición e historia del estilo",
+  "Evaluación de exámenes de grados inferiores"
+ ],
+ "adulto-dan8": [
+  "Rol de asesoramiento técnico del dojo",
+  "Transmisión de la tradición e historia del estilo",
+  "Evaluación de exámenes de grados inferiores"
+ ],
+ "adulto-dan9": [
+  "Máxima autoridad técnica y honorífica del estilo"
+ ],
+ "adulto-dan10": [
+  "Máxima autoridad técnica y honorífica del estilo"
+ ]
+}
