@@ -407,3 +407,9 @@ tbody tr.suspended td{opacity:0.5;}
 .print-footer{font-size:10px;color:#666;margin-top:14px;}
 .export-choice{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
 .export-choice button{text-align:left;}
+
+/* ---------- Ajustes del sistema real ---------- */
+img[hidden]{display:none !important;}
+.hp-field{position:absolute !important;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;}
+.pw-box{font-size:22px;font-weight:700;text-align:center;letter-spacing:.04em;background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius);padding:14px;margin:10px 0;user-select:all;}
+.loading-note{padding:40px 16px;text-align:center;color:var(--ink-soft);font-size:14px;}

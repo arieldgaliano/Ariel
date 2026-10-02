@@ -1,37 +1,131 @@
 /* ============================================================
-   DATOS DE EJEMPLO
+   CONEXIÓN CON EL SERVIDOR
+   Todo lo que se ve acá viene del servidor y cada cambio se guarda allá.
+   El servidor vuelve a verificar los permisos en CADA pedido: lo que se
+   oculta en pantalla (botones, menús) es solo comodidad visual.
 ============================================================ */
-let belts = [
-  // — Infantil —
-  {id:'infantil-blanco', name:'Blanco', group:'infantil', order:1, color:'var(--belt-blanco)', minMonths:0, classesRequired:0, kyu:true},
-  {id:'infantil-blanco-celeste', name:'Blanco punta celeste', group:'infantil', order:2, color:'var(--belt-blanco)', tip:'var(--belt-celeste)', minMonths:3, classesRequired:12, kyu:true},
-  {id:'infantil-celeste', name:'Celeste', group:'infantil', order:3, color:'var(--belt-celeste)', minMonths:4, classesRequired:16, kyu:true},
-  {id:'infantil-celeste-amarilla', name:'Celeste punta amarilla', group:'infantil', order:4, color:'var(--belt-celeste)', tip:'var(--belt-amarillo)', minMonths:3, classesRequired:12, kyu:true},
-  {id:'infantil-amarillo', name:'Amarillo', group:'infantil', order:5, color:'var(--belt-amarillo)', minMonths:4, classesRequired:16, kyu:true},
-  {id:'infantil-amarillo-naranja', name:'Amarillo punta naranja', group:'infantil', order:6, color:'var(--belt-amarillo)', tip:'var(--belt-naranja)', minMonths:3, classesRequired:12, kyu:true},
-  {id:'infantil-naranja', name:'Naranja', group:'infantil', order:7, color:'var(--belt-naranja)', minMonths:5, classesRequired:20, kyu:true},
-  {id:'infantil-verde', name:'Verde', group:'infantil', order:8, color:'var(--belt-verde)', minMonths:6, classesRequired:24, kyu:true},
-  {id:'infantil-azul', name:'Azul', group:'infantil', order:9, color:'var(--belt-azul)', minMonths:6, classesRequired:24, kyu:true},
-  {id:'infantil-marron', name:'Marrón', group:'infantil', order:10, color:'var(--belt-marron)', minMonths:8, classesRequired:32, kyu:true},
-  {id:'infantil-negro-junior', name:'Negro junior (punta blanca)', group:'infantil', order:11, color:'var(--belt-negro)', tip:'var(--belt-blanco)', minMonths:10, classesRequired:40},
-  // — Adultos —
-  {id:'adulto-blanco', name:'Blanco', group:'adulto', order:1, color:'var(--belt-blanco)', minMonths:0, classesRequired:0, kyu:true},
-  {id:'adulto-amarillo', name:'Amarillo', group:'adulto', order:2, color:'var(--belt-amarillo)', minMonths:6, classesRequired:24, kyu:true},
-  {id:'adulto-naranja', name:'Naranja', group:'adulto', order:3, color:'var(--belt-naranja)', minMonths:6, classesRequired:24, kyu:true},
-  {id:'adulto-verde', name:'Verde', group:'adulto', order:4, color:'var(--belt-verde)', minMonths:8, classesRequired:32, kyu:true},
-  {id:'adulto-azul', name:'Azul', group:'adulto', order:5, color:'var(--belt-azul)', minMonths:8, classesRequired:32, kyu:true},
-  {id:'adulto-marron', name:'Marrón', group:'adulto', order:6, color:'var(--belt-marron)', minMonths:12, classesRequired:48, kyu:true},
-  {id:'adulto-dan1', name:'Negro 1º Dan', group:'adulto', order:7, color:'var(--belt-negro)', tip:'var(--belt-amarillo)', tipCount:1, minMonths:18, classesRequired:60},
-  {id:'adulto-dan2', name:'Negro 2º Dan', group:'adulto', order:8, color:'var(--belt-negro)', tip:'var(--belt-amarillo)', tipCount:2, minMonths:24, classesRequired:80},
-  {id:'adulto-dan3', name:'Negro 3º Dan', group:'adulto', order:9, color:'var(--belt-negro)', tip:'var(--belt-amarillo)', tipCount:3, minMonths:36, classesRequired:100},
-  {id:'adulto-dan4', name:'Negro 4º Dan', group:'adulto', order:10, color:'var(--belt-negro)', tip:'var(--belt-amarillo)', tipCount:4, minMonths:48, classesRequired:120},
-  {id:'adulto-dan5', name:'Negro 5º Dan', group:'adulto', order:11, color:'var(--belt-negro)', tip:'var(--belt-amarillo)', tipCount:5, minMonths:60, classesRequired:140},
-  {id:'adulto-dan6', name:'6º Dan', group:'adulto', order:12, color:'var(--belt-rojo)', tip:'var(--belt-blanco)', minMonths:72, classesRequired:200},
-  {id:'adulto-dan7', name:'7º Dan', group:'adulto', order:13, color:'var(--belt-rojo)', tip:'var(--belt-blanco)', minMonths:84, classesRequired:220},
-  {id:'adulto-dan8', name:'8º Dan', group:'adulto', order:14, color:'var(--belt-rojo)', tip:'var(--belt-blanco)', minMonths:96, classesRequired:240},
-  {id:'adulto-dan9', name:'9º Dan', group:'adulto', order:15, color:'var(--belt-rojo)', minMonths:120, classesRequired:260},
-  {id:'adulto-dan10', name:'10º Dan', group:'adulto', order:16, color:'var(--belt-rojo)', minMonths:144, classesRequired:280},
-];
+class ApiError extends Error {
+  constructor(message, status, data){ super(message); this.status = status; this.data = data || {}; }
+}
+async function api(method, path, body, opts){
+  opts = opts || {};
+  const headers = {'X-Requested-With':'dojo'};
+  let payload;
+  if(opts.raw){ payload = body; if(opts.contentType) headers['Content-Type'] = opts.contentType; }
+  else if(body !== undefined){ headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
+  Object.assign(headers, opts.headers || {});
+  let res;
+  try{ res = await fetch('/api' + path, {method, headers, body: payload, credentials:'same-origin'}); }
+  catch(e){ throw new ApiError('No hay conexión con el servidor. Revisá tu internet y probá de nuevo.', 0); }
+  let data = null;
+  if((res.headers.get('content-type') || '').includes('application/json')) data = await res.json().catch(()=>null);
+  if(!res.ok){
+    const err = new ApiError((data && data.error) || 'Ocurrió un error. Probá de nuevo.', res.status, data);
+    if(res.status === 401 && data && data.code === 'unauthenticated' && me) onSessionExpired();
+    if(res.status === 403 && data && data.code === 'must_change_password') openForcedPasswordChange();
+    throw err;
+  }
+  return data;
+}
+// Cualquier error del servidor que no se atrape en el código se muestra como aviso.
+window.addEventListener('unhandledrejection', e=>{
+  if(e.reason instanceof ApiError){
+    e.preventDefault();
+    if(e.reason.data && (e.reason.data.code === 'unauthenticated' || e.reason.data.code === 'must_change_password')) return;
+    toast(e.reason.message);
+  }
+});
+
+// Sube un archivo (foto, logo, comprobante) como archivo real. Las imágenes grandes se achican antes.
+async function prepareImage(file, maxDim){
+  if(!file || !file.type.startsWith('image/') || file.type === 'image/gif') return file;
+  try{
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+    if(scale === 1 && file.size < 1.5 * 1024 * 1024) return file;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bmp.width * scale); canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const keepPng = file.type === 'image/png';
+    const blob = await new Promise(r=>canvas.toBlob(r, keepPng ? 'image/png' : 'image/jpeg', 0.88));
+    return blob || file;
+  }catch(e){ return file; }
+}
+async function uploadFile(file, kind, extraQuery){
+  const body = file.type.startsWith('image/') ? await prepareImage(file, kind === 'proof' ? 1600 : 1024) : file;
+  const q = '?kind=' + kind + (extraQuery ? '&' + extraQuery : '');
+  return api('POST', '/files' + q, body, {raw:true, contentType: body.type || 'application/octet-stream', headers:{'X-Filename': encodeURIComponent(file.name || '')}});
+}
+
+/* ============================================================
+   ESTADO (copia local de lo que el servidor permite ver a esta persona)
+============================================================ */
+const expenseCategories = ['Alquiler', 'Material', 'Certificados de cinturón', 'Otro'];
+const eventTypeLabels = {examen:'Mesa de examen', torneo:'Torneo', seminario:'Seminario', actividad:'Actividad extra'};
+let me = null;                 // sesión: {role, username, studentId, modules, mustChangePassword, serverToday}
+let belts = [];
+let dojos = [];
+let programs = {};
+let students = [];
+let payments = [];
+let expenses = [];
+let events = [];
+let schedule = [];
+let announcements = [];
+let forumPosts = [];
+let libraryGlossary = [];
+let libraryLinks = [];
+let pendingInscriptions = [];
+let issuedDiplomas = [];
+let nextDiplomaNumber = 1;
+let classesSinceBelt = 0;
+let feeConfig = { cuotaAdulto:0, cuotaInfantil:0, examBoard:0, belt:0 };
+const defaultHeroPhoto = '/img/hero-default.jpg';
+let homeContent = { heroTitle:'', heroLead:'', nosotrosDesc:'', showActivities:true, showFilosofia:true, filosofiaText:'', heroPhoto:null, showVideo:false, videoUrl:'' };
+let schoolLogo = null;         // dirección del archivo del logo (o null)
+let currentRole = 'alumno';    // 'admin' | 'instructor' | 'alumno'
+let currentStudentId = null;
+let currentInstructorStudentId = null;
+let loginTab = 'alumno';
+
+function setRoleFromMe(){
+  currentRole = me.role;
+  currentStudentId = me.studentId;
+  currentInstructorStudentId = me.studentId;
+}
+function applyPublicConfig(c){
+  belts = c.belts; dojos = c.dojos; events = c.events; schedule = c.schedule;
+  homeContent = c.home; letterheadConfig = c.letterhead; schoolLogo = c.logo || null;
+  Object.assign(themeColors, c.theme);
+  applyTheme();
+  refreshBranding();
+}
+async function loadPublicConfig(){ applyPublicConfig(await api('GET', '/public/config')); }
+async function loadAppData(){
+  const d = await api('GET', '/bootstrap');
+  me = d.me; setRoleFromMe();
+  applyPublicConfig(d.config);
+  programs = d.programs || {};
+  students = d.students || [];
+  payments = d.payments || [];
+  expenses = d.expenses || [];
+  pendingInscriptions = d.inscriptions || [];
+  libraryGlossary = d.glossary || [];
+  libraryLinks = d.links || [];
+  announcements = d.announcements || [];
+  forumPosts = d.forumPosts || [];
+  if(d.fees) feeConfig = d.fees;
+  if(d.letterhead) letterheadConfig = d.letterhead;
+  if(d.diplomaConfig) diplomaConfig = d.diplomaConfig;
+  issuedDiplomas = d.issuedDiplomas || [];
+  nextDiplomaNumber = d.nextDiplomaNumber || 1;
+  classesSinceBelt = d.classesSinceBelt || 0;
+}
+function upsertById(list, item){
+  const i = list.findIndex(x=>x.id===item.id);
+  if(i >= 0) list[i] = item; else list.push(item);
+}
+
 function beltById(id){ return belts.find(b=>b.id===id); }
 function beltsForGroup(group){ return belts.filter(b=>b.group===group).sort((a,b)=>a.order-b.order); }
 function beltIndexInGroup(id, group){ return beltsForGroup(group).findIndex(b=>b.id===id); }
@@ -61,214 +155,78 @@ function beltOptionsHtml(group, selectedId){
   return beltsForGroup(group).map(b=>`<option value="${b.id}" ${b.id===selectedId?'selected':''}>${b.name}</option>`).join('');
 }
 
-const dojos = [ {id:'central', name:'Dojo Central'}, {id:'norte', name:'Dojo Norte'} ];
 function dojoName(id){ return (dojos.find(d=>d.id===id)||{}).name || '—'; }
-
-const programs = {
-  'infantil-blanco': ['Postura básica (kiba dachi, zenkutsu dachi)', 'Golpe de puño: choku zuki', 'Bloqueo: gedan barai', 'Disciplina y saludo en el dojo'],
-  'infantil-blanco-celeste': ['Repaso de posturas básicas', 'Coordinación de golpe y bloqueo', 'Conteo en japonés del 1 al 10', 'Kata: Taikyoku Shodan (introducción)'],
-  'infantil-celeste': ['Patada frontal: mae geri', 'Bloqueo alto: age uke', 'Trabajo en pareja simple', 'Kata: Taikyoku Shodan'],
-  'infantil-celeste-amarilla': ['Combinaciones de puño y patada', 'Equilibrio y caídas básicas', 'Kata: Pinan Shodan (introducción)'],
-  'infantil-amarillo': ['Patada lateral: yoko geri', 'Bloqueo circular: uchi uke', 'Kata: Pinan Shodan'],
-  'infantil-amarillo-naranja': ['Combinaciones de 3 movimientos', 'Trabajo de distancia (maai)', 'Kata: Pinan Nidan (introducción)'],
-  'infantil-naranja': ['Patada circular: mawashi geri', 'Introducción a kumite acordado', 'Kata: Pinan Nidan'],
-  'infantil-verde': ['Combinaciones de mano y pierna', 'Kumite acordado', 'Kata: Pinan Sandan'],
-  'infantil-azul': ['Barridos básicos: ashi barai', 'Kumite semi-libre supervisado', 'Kata: Pinan Yondan'],
-  'infantil-marron': ['Preparación para negro junior', 'Ayudantía en clases de blancos', 'Kata: Pinan Godan'],
-  'infantil-negro-junior': ['Perfeccionamiento de katas de Pinan', 'Primeras nociones de bunkai', 'Kata: Naihanchi Shodan'],
-
-  'adulto-blanco': ['Postura básica (kiba dachi, zenkutsu dachi)', 'Golpes de puño: choku zuki', 'Bloqueo: gedan barai', 'Kata: Taikyoku Shodan'],
-  'adulto-amarillo': ['Patada frontal: mae geri', 'Bloqueo alto: age uke', 'Combinaciones de 3 movimientos', 'Kata: Pinan Shodan'],
-  'adulto-naranja': ['Patada lateral: yoko geri', 'Bloqueo circular: uchi uke', 'Trabajo de distancia (maai)', 'Kata: Pinan Nidan'],
-  'adulto-verde': ['Patada circular: mawashi geri', 'Combinaciones de mano y pierna', 'Introducción a kumite acordado', 'Kata: Pinan Sandan'],
-  'adulto-azul': ['Barridos básicos: ashi barai', 'Contraataques en kumite', 'Trabajo de kata a doble velocidad', 'Kata: Pinan Yondan'],
-  'adulto-marron': ['Preparación de examen a negro', 'Kumite libre controlado', 'Defensa personal básica', 'Kata: Pinan Godan'],
-  'adulto-dan1': ['Perfeccionamiento de katas superiores', 'Enseñanza asistida de clase', 'Bunkai del Pinan Godan', 'Kata: Naihanchi Shodan'],
-  'adulto-dan2': ['Profundización de bunkai', 'Asistencia de clase con mayor autonomía', 'Kata: Kusanku'],
-  'adulto-dan3': ['Introducción a kobudo (armas tradicionales)', 'Formación pedagógica básica', 'Kata: Chinto'],
-  'adulto-dan4': ['Formación de instructores', 'Preparación de mesas de examen de grados inferiores', 'Kata avanzado a elección'],
-  'adulto-dan5': ['Investigación de kata y aplicación (bunkai avanzado)', 'Dirección de clase propia', 'Kata avanzado a elección'],
-  'adulto-dan6': ['Rol de asesoramiento técnico del dojo', 'Transmisión de la tradición e historia del estilo', 'Evaluación de exámenes de grados inferiores'],
-  'adulto-dan7': ['Rol de asesoramiento técnico del dojo', 'Transmisión de la tradición e historia del estilo', 'Evaluación de exámenes de grados inferiores'],
-  'adulto-dan8': ['Rol de asesoramiento técnico del dojo', 'Transmisión de la tradición e historia del estilo', 'Evaluación de exámenes de grados inferiores'],
-  'adulto-dan9': ['Máxima autoridad técnica y honorífica del estilo'],
-  'adulto-dan10': ['Máxima autoridad técnica y honorífica del estilo'],
-};
-
-let adminAccount = {username:'sensei', passwordHash:'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3'}; // hash SHA-256 — la contraseña nunca se guarda en texto plano
-let students = [
-  {id:1, name:'Martina Suárez', belt:'adulto-verde', since:'2023-03-01', birth:'1998-04-12', familyGroup:'', phone:'5493610000001', guardian:'', group:'adulto', dojo:'central', status:'activo', isInstructor:false, scholarship:{active:false, amount:0}, activities:[{id:'a1', type:'examen', activity:'Examen de 3º Kyu', date:'2023-02-20', place:'Dojo Central', instructor:'', notes:'', belt:'adulto-verde', result:'aprobado'}], dni:'30111222', username:'martina.suarez', passwordHash:'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3', enabledModules:['mi-programa','mis-cuotas','mi-asistencia','biblioteca','foro','inscripcion']},
-  {id:2, name:'Lucas Ferreyra', belt:'infantil-amarillo-naranja', since:'2024-08-10', birth:'2016-10-03', familyGroup:'', phone:'5493610000002', guardian:'Silvina Ferreyra', group:'infantil', dojo:'central', status:'activo', isInstructor:false, scholarship:{active:false, amount:0}, activities:[{id:'a1', type:'examen', activity:'Examen de 5º Kyu', date:'2024-08-03', place:'Dojo Central', instructor:'', notes:'', belt:'infantil-amarillo-naranja', result:'aprobado'}], dni:'45222333', username:'lucas.ferreyra', passwordHash:'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3', enabledModules:['mi-programa','mis-cuotas','mi-asistencia','biblioteca','foro','inscripcion']},
-  {id:3, name:'Iván Castro', belt:'adulto-dan1', since:'2019-02-15', birth:'1990-11-30', familyGroup:'', phone:'5493610000003', guardian:'', group:'adulto', dojo:'norte', status:'activo', isInstructor:true, scholarship:{active:false, amount:0}, activities:[], dni:'28333444', username:'ivan.castro', passwordHash:'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3', enabledModules:['mi-programa','mis-cuotas','mi-asistencia','asistencia','pagos','biblioteca','foro','inscripcion'], modulePerms:{biblioteca:'write',asistencia:'write',pagos:'write',programas:'read',cinturones:'read'}},
-  {id:4, name:'Sofía Aguirre', belt:'infantil-blanco', since:'2025-06-02', birth:'2018-10-08', familyGroup:'', phone:'5493610000004', guardian:'Pablo Aguirre', group:'infantil', dojo:'central', status:'activo', isInstructor:false, scholarship:{active:true, amount:6000}, activities:[], dni:'46444555', username:'sofia.aguirre', passwordHash:'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3', enabledModules:['mi-programa','mis-cuotas','mi-asistencia','biblioteca','foro','inscripcion']},
-  {id:5, name:'Bruno Medina', belt:'adulto-azul', since:'2022-11-20', birth:'1995-07-22', familyGroup:'', phone:'5493610000005', guardian:'', group:'adulto', dojo:'norte', status:'suspendido', isInstructor:false, scholarship:{active:false, amount:0}, activities:[], dni:'27555666', username:'bruno.medina', passwordHash:'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3', enabledModules:['mi-programa','mis-cuotas','mi-asistencia','biblioteca','foro','inscripcion']},
-  {id:6, name:'Camila Rojas', belt:'infantil-naranja', since:'2024-01-18', birth:'2017-10-15', familyGroup:'', phone:'5493610000006', guardian:'Marcela Rojas', group:'infantil', dojo:'norte', status:'activo', isInstructor:false, scholarship:{active:false, amount:0}, activities:[{id:'a1', type:'examen', activity:'Examen de 4º Kyu', date:'2024-01-10', place:'Dojo Norte', instructor:'', notes:'', belt:'infantil-naranja', result:'aprobado'},{id:'a2', type:'examen', activity:'Examen de 4º Kyu', date:'2023-11-05', place:'Dojo Norte', instructor:'', notes:'A mejorar: mawashi geri.', belt:'infantil-naranja', result:'no aprobado'}], dni:'44666777', username:'camila.rojas', passwordHash:'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3', enabledModules:['mi-programa','mis-cuotas','mi-asistencia','biblioteca','foro','inscripcion']},
-  {id:7, name:'Prof. Yamila Ortiz', belt:'adulto-dan3', since:'2015-05-01', birth:'1985-03-10', familyGroup:'', phone:'5493610000007', guardian:'', group:'adulto', dojo:'norte', status:'activo', isInstructor:true, scholarship:{active:false, amount:0}, activities:[], dni:'25777888', username:'yamila.ortiz', passwordHash:'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3', enabledModules:['mi-programa','mis-cuotas','mi-asistencia','asistencia','pagos','biblioteca','foro','inscripcion'], modulePerms:{biblioteca:'write',asistencia:'write',pagos:'write',programas:'read',cinturones:'read'}},
-];
-let nextStudentId = 8;
-let nextActivityId = 100;
-
-let feeConfig = { cuotaAdulto:15000, cuotaInfantil:12000, examBoard:20000, belt:8000 };
-const defaultHeroPhoto = "__IMG__";
-let homeContent = {
-  heroTitle: 'Karate-Do Shorin-ryu (Kobayashi-ryu) y Kobudo',
-  heroLead: 'Clases para adultos e infantiles en Dojo Central y Dojo Norte. Disciplina, tradición y comunidad, cinturón a cinturón.',
-  nosotrosDesc: 'Shuri-te Kan enseña Karate-Do Shorin-ryu (rama Kobayashi) y Kobudo, con clases separadas para adultos e infantiles en nuestros dos dojos. El programa avanza por examen de cinturón, con un cuerpo de instructores que acompaña cada etapa.',
-  showActivities: true,
-  showFilosofia: true,
-  filosofiaText: 'Respeto: hacia el dojo, los instructores y compañeros.\nDisciplina: constancia en la práctica, dentro y fuera del tatami.\nPerseverancia: cada cinturón se gana con esfuerzo sostenido, no con atajos.\nHumildad: el aprendizaje no termina nunca, ni siquiera en el cinturón negro.\nEspíritu de superación: buscar ser mejor que uno mismo, no mejor que los demás.',
-  heroPhoto: null,
-  showVideo: false,
-  videoUrl: ''
-};
-let schoolLogo = "__IMG__"; // dataURL — logo real del dojo, reemplazable desde Configuración
-
-let payments = [
-  {id:'p1', studentId:1, period:'Septiembre 2026', concept:'Cuota mensual', amount:15000, status:'pendiente'},
-  {id:'p2', studentId:2, period:'Septiembre 2026', concept:'Cuota mensual', amount:12000, status:'pagada', paidOn:'2026-09-03', method:'Transferencia', medium:'Electrónico'},
-  {id:'p3', studentId:3, period:'Septiembre 2026', concept:'Cuota mensual', amount:15000, status:'pendiente'},
-  {id:'p4', studentId:4, period:'Septiembre 2026', concept:'Cuota mensual (becada)', amount:6000, status:'pagada', paidOn:'2026-09-05', method:'Efectivo', medium:'Físico'},
-  {id:'p5', studentId:5, period:'Septiembre 2026', concept:'Cuota mensual', amount:15000, status:'pendiente'},
-  {id:'p6', studentId:6, period:'Septiembre 2026', concept:'Cuota mensual', amount:13000, status:'pagada', paidOn:'2026-09-02', method:'Mercado Pago', medium:'Electrónico'},
-  {id:'p7', studentId:1, period:'Agosto 2026', concept:'Cuota mensual', amount:15000, status:'pagada', paidOn:'2026-08-04', method:'Efectivo', medium:'Físico'},
-  {id:'p8', studentId:3, period:'Septiembre 2026', concept:'Mesa de examen', amount:20000, status:'revision', proofMedium:'Mercado Pago', proofNote:'Transferí desde la cuenta de mi mamá.'},
-];
-let nextPaymentId = 9;
-
-const expenseCategories = ['Alquiler', 'Material', 'Certificados de cinturón', 'Otro'];
-let expenses = [
-  {id:'g1', category:'Alquiler', concept:'Alquiler del salón — Septiembre 2026', amount:180000, date:'2026-09-01', status:'pendiente'},
-  {id:'g2', category:'Alquiler', concept:'Alquiler del salón — Agosto 2026', amount:175000, date:'2026-08-01', status:'pagado', paidOn:'2026-08-01'},
-  {id:'g3', category:'Alquiler', concept:'Alquiler del salón — Julio 2026', amount:175000, date:'2026-07-01', status:'pagado', paidOn:'2026-07-01'},
-  {id:'g4', category:'Material', concept:'Compra de protectores y petos', amount:45000, date:'2026-09-10', status:'pagado', paidOn:'2026-09-10'},
-  {id:'g5', category:'Certificados de cinturón', concept:'Certificados — mesa de examen de septiembre', amount:12000, date:'2026-09-15', status:'pendiente'},
-];
-let nextExpenseId = 6;
-
-let schedule = [
-  {day:'Lun', details:'Infantiles · Dojo Central 18:00 – 19:00'},
-  {day:'Lun', details:'Adultos · Dojo Central 19:15 – 20:45'},
-  {day:'Mar', details:'Infantiles · Dojo Norte 18:00 – 19:00'},
-  {day:'Mié', details:'Adultos · Dojo Central 19:15 – 20:45'},
-  {day:'Vie', details:'Clase general · Dojo Norte 18:30 – 20:00'},
-];
-
-const eventTypeLabels = {examen:'Mesa de examen', torneo:'Torneo', seminario:'Seminario', actividad:'Actividad extra'};
-let events = [
-  {id:'e1', type:'examen', title:'Mesa de examen — Verde a Azul y Marrón a Negro', date:'2026-09-27', notes:''},
-  {id:'e2', type:'seminario', title:'Seminario de Bunkai con invitado especial', date:'2026-10-04', notes:'Cupo limitado, avisar asistencia con anticipación.'},
-  {id:'e3', type:'actividad', title:'Entrenamiento conjunto Dojo Central + Dojo Norte', date:'2026-09-30', notes:''},
-  {id:'e4', type:'torneo', title:'Torneo Regional de Karate-Do', date:'2026-10-18', notes:'Categorías kata y kumite, inscripción previa.'},
-];
-let nextEventId = 5;
-
-let attendanceHistory = {
-  1: ['2026-09-01','2026-09-03','2026-09-08','2026-09-10'],
-  2: ['2026-09-01','2026-09-08','2026-09-10'],
-  3: ['2026-09-03','2026-09-08'],
-  4: ['2026-09-01','2026-09-03','2026-09-08','2026-09-10'],
-  5: ['2026-09-01','2026-09-10'],
-  6: ['2026-09-01','2026-09-03','2026-09-08'],
-  7: ['2026-09-01','2026-09-03','2026-09-08','2026-09-10'],
-};
-let todaysAttendance = new Set();
-
-let pendingInscriptions = [
-  {id:'i1', name:'Tomás Ibáñez', birth:'2016-04-11', group:'infantil', dojo:'central', phone:'5493610000099', guardian:'Ana Ibáñez', notes:'Sin condiciones médicas.'},
-];
-let nextInscId = 2;
-
-let libraryGlossary = [
-  {id:'g1', term:'Kata', def:'Secuencia formal y preestablecida de técnicas, practicada individualmente contra adversarios imaginarios.'},
-  {id:'g2', term:'Kumite', def:'Combate o práctica de técnicas con un compañero, de forma acordada o libre según el nivel.'},
-  {id:'g3', term:'Bunkai', def:'Análisis e interpretación práctica de las aplicaciones de movimientos de un kata.'},
-  {id:'g4', term:'Maai', def:'Distancia y tiempo correctos entre dos practicantes durante un intercambio.'},
-];
-let nextGlossaryId = 5;
-let libraryLinks = [
-  {id:'l1', title:'Taikyoku Shodan — ejecución paso a paso', url:'https://youtube.com/', type:'video', desc:''},
-  {id:'l2', title:'Reglamento de la federación', url:'https://example.org/', type:'link', desc:''},
-];
-let nextLinkId = 3;
-
-let forumPosts = [
-  {id:'f1', author:'Martina Suárez', role:'Alumno', text:'¿Alguien tiene el video de la clase del sábado? Quiero repasar el kata para el examen.', date:'2026-09-15'},
-  {id:'f2', author:'Prof. Diego Peralta', role:'Instructor', text:'Recuerden traer protector bucal para las prácticas de kumite de esta semana.', date:'2026-09-16'},
-];
-let nextForumId = 3;
-let announcements = [
-  {id:'an1', title:'Receso de vacaciones de invierno', body:'No hay clases del 14 al 25 de julio. Retomamos el lunes 28 con el horario habitual.', date:'2026-07-01'},
-];
-let nextAnnouncementId = 2;
-
-let currentRole = 'alumno';
-let currentStudentId = 1;
-let currentInstructorStudentId = 3;
 
 /* ============================================================
    LOGIN
 ============================================================ */
-function refreshLoginSelects(){
-  const senpaiList = document.getElementById('senpai-usernames');
-  senpaiList.innerHTML = students.map(s=>`<option value="${s.username}">${s.name}${s.isInstructor?' · Instructor':''}</option>`).join('');
-  const senseiList = document.getElementById('sensei-usernames');
-  senseiList.innerHTML = `<option value="${adminAccount.username}">Sensei</option>`;
-}
-refreshLoginSelects();
 
 function setLoginRole(role){
-  currentRole = role;
+  // Las pestañas solo cambian qué campos se muestran; quién es la persona lo decide el servidor.
+  loginTab = role;
   document.getElementById('tab-admin').classList.toggle('active', role==='admin');
   document.getElementById('tab-alumno').classList.toggle('active', role==='alumno');
   document.getElementById('login-field-admin').classList.toggle('hidden', role!=='admin');
   document.getElementById('login-field-alumno').classList.toggle('hidden', role!=='alumno');
   document.getElementById('login-error').style.display = 'none';
 }
-
 async function login(){
   const errEl = document.getElementById('login-error');
   errEl.style.display = 'none';
   const btn = document.getElementById('login-btn');
+  const user = document.getElementById(loginTab==='admin' ? 'sensei-username' : 'senpai-username').value.trim();
+  const pass = document.getElementById(loginTab==='admin' ? 'sensei-password' : 'senpai-password').value;
+  if(!user || !pass){ errEl.textContent = 'Completá usuario y contraseña.'; errEl.style.display = 'block'; return; }
   btn.disabled = true; const prevLabel = btn.textContent; btn.textContent = 'Verificando…';
   try{
-    if(currentRole==='admin'){
-      const user = document.getElementById('sensei-username').value.trim();
-      const pass = document.getElementById('sensei-password').value;
-      const hash = await sha256Hex(pass);
-      if(user!==adminAccount.username || hash!==adminAccount.passwordHash){
-        errEl.textContent = 'Usuario o contraseña incorrectos.'; errEl.style.display='block'; return;
-      }
-    } else {
-      const user = document.getElementById('senpai-username').value.trim();
-      const pass = document.getElementById('senpai-password').value;
-      const s = students.find(x=>x.username===user);
-      if(!s){ errEl.textContent = 'Usuario o contraseña incorrectos.'; errEl.style.display='block'; return; }
-      const hash = await sha256Hex(pass);
-      if(hash!==s.passwordHash){ errEl.textContent = 'Usuario o contraseña incorrectos.'; errEl.style.display='block'; return; }
-      if(s.status!=='activo'){ errEl.textContent = 'Este usuario está suspendido. Consultá con el Sensei.'; errEl.style.display='block'; return; }
-      currentRole = s.isInstructor ? 'instructor' : 'alumno';
-      currentStudentId = s.id;
-      currentInstructorStudentId = s.id;
-    }
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('app-shell').style.display='block';
-    renderShell();
-  } finally {
+    me = await api('POST', '/auth/login', {username:user, password:pass});
+    document.getElementById('sensei-password').value = '';
+    document.getElementById('senpai-password').value = '';
+    await enterApp();
+  }catch(e){
+    if(!(e instanceof ApiError)) throw e;
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  }finally{
     btn.disabled = false; btn.textContent = prevLabel;
   }
 }
-function logout(){
-  document.getElementById('app-shell').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('senpai-password').value = '';
-  document.getElementById('sensei-password').value = '';
-  todaysAttendance = new Set();
-  updateFab();
+// Entra al sistema con la sesión ya iniciada: carga los datos que le corresponden y arma las pantallas.
+async function enterApp(){
+  if(me.mustChangePassword){ openForcedPasswordChange(); return; }
+  await loadAppData();
+  ['home-screen','login-screen','inscripcion-screen','verify-screen'].forEach(id=>document.getElementById(id).style.display = 'none');
+  document.getElementById('app-shell').style.display = 'block';
+  renderShell();
+  window.scrollTo(0,0);
+  if(location.hash && /^#(login|home)?$/.test(location.hash)) history.replaceState(null, '', location.pathname);
+  const pending = sessionStorage.getItem('pendingCheckin');
+  if(pending){ sessionStorage.removeItem('pendingCheckin'); doCheckin(pending); }
+}
+function resetAppState(){
+  me = null; students = []; payments = []; expenses = []; pendingInscriptions = []; issuedDiplomas = [];
+  libraryGlossary = []; libraryLinks = []; announcements = []; forumPosts = [];
+  attendanceToday = new Set(); attendanceMonthData = null; attendanceMonths = [];
+  closeModal();
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('fab-attendance').classList.remove('show');
+}
+async function logout(){
+  try{ await api('POST', '/auth/logout', {}); }catch(e){}
+  resetAppState();
+  history.replaceState(null, '', location.pathname);
+  route();
+}
+function onSessionExpired(){
+  resetAppState();
+  document.getElementById('home-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = 'Tu sesión venció. Ingresá de nuevo.'; errEl.style.display = 'block';
 }
 function updateFab(){
   const fab = document.getElementById('fab-attendance');
   if(!fab) return;
-  const loggedIn = getComputedStyle(document.getElementById('app-shell')).display !== 'none';
+  const loggedIn = !!me && getComputedStyle(document.getElementById('app-shell')).display !== 'none';
   const canTake = currentRole==='admin' || (currentRole==='instructor' && canWriteModule('asistencia'));
   fab.classList.toggle('show', loggedIn && canTake);
 }
@@ -276,10 +234,10 @@ function openChangePasswordModal(){
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">Cambiar mi contraseña</h3>
-    <div class="field"><label>Contraseña actual</label><input type="password" id="cp-current" autocomplete="off"></div>
-    <div class="field"><label>Nueva contraseña</label><input type="password" id="cp-new" autocomplete="off"></div>
-    <div class="field"><label>Confirmar nueva contraseña</label><input type="password" id="cp-confirm" autocomplete="off"></div>
-    <p class="hint">Se guarda siempre encriptada (hash SHA-256), nunca en texto plano.</p>
+    <div class="field"><label>Contraseña actual</label><input type="password" id="cp-current" autocomplete="current-password"></div>
+    <div class="field"><label>Nueva contraseña</label><input type="password" id="cp-new" autocomplete="new-password"></div>
+    <div class="field"><label>Confirmar nueva contraseña</label><input type="password" id="cp-confirm" autocomplete="new-password"></div>
+    <p class="hint">Mínimo 8 caracteres. Se guarda siempre encriptada: ni el Sensei puede verla.</p>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-dark" onclick="saveChangePassword()">Guardar</button>
@@ -292,102 +250,101 @@ async function saveChangePassword(){
   const confirmVal = document.getElementById('cp-confirm').value;
   if(!current || !next){ toast('Completá todos los campos.'); return; }
   if(next!==confirmVal){ toast('La nueva contraseña no coincide con la confirmación.'); return; }
-  const account = currentRole==='admin' ? adminAccount : activeStudent();
-  const currentHash = await sha256Hex(current);
-  if(currentHash !== account.passwordHash){ toast('La contraseña actual no es correcta.'); return; }
-  account.passwordHash = await sha256Hex(next);
+  me = await api('POST', '/auth/change-password', {current, next});
   closeModal();
   toast('Contraseña actualizada.');
+}
+// Cuando el Sensei restableció la clave (o es la primera vez): no se puede seguir sin elegir una propia.
+function openForcedPasswordChange(){
+  if(document.getElementById('fp-forced')) return;
+  showModal(`
+    <h3 class="serif" id="fp-forced">Elegí tu contraseña</h3>
+    <p class="hint" style="margin-top:0">Por seguridad tenés que cambiar la contraseña inicial antes de seguir. Mínimo 8 caracteres.</p>
+    <div class="field"><label>Contraseña actual (la que te dieron)</label><input type="password" id="fc-current" autocomplete="current-password"></div>
+    <div class="field"><label>Nueva contraseña</label><input type="password" id="fc-new" autocomplete="new-password"></div>
+    <div class="field"><label>Repetí la nueva contraseña</label><input type="password" id="fc-confirm" autocomplete="new-password"></div>
+    <p class="demo-note" id="fc-error" style="display:none;color:var(--shu-deep);"></p>
+    <div class="modal-actions">
+      <button class="btn" onclick="logout()">Salir</button>
+      <button class="btn btn-dark" onclick="saveForcedPassword()">Guardar y entrar</button>
+    </div>
+  `, {locked:true});
+}
+async function saveForcedPassword(){
+  const current = document.getElementById('fc-current').value;
+  const next = document.getElementById('fc-new').value;
+  const errEl = document.getElementById('fc-error');
+  errEl.style.display = 'none';
+  const fail = msg=>{ errEl.textContent = msg; errEl.style.display = 'block'; };
+  if(!current || !next) return fail('Completá todos los campos.');
+  if(next!==document.getElementById('fc-confirm').value) return fail('La nueva contraseña no coincide con la confirmación.');
+  try{
+    me = await api('POST', '/auth/change-password', {current, next});
+  }catch(e){ if(e instanceof ApiError) return fail(e.message); throw e; }
+  modalLocked = false; closeModal();
+  toast('Contraseña actualizada.');
+  await enterApp();
 }
 function openForgotPassword(){
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
-    <h3 class="serif">Recuperar contraseña</h3>
-    <p class="hint" style="margin-top:0">Verificamos tu identidad con tu usuario y tu DNI.</p>
-    <div class="field"><label>Usuario</label><input type="text" id="fp-username" autocomplete="off"></div>
-    <div class="field"><label>DNI</label><input type="text" id="fp-dni" autocomplete="off"></div>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-dark" onclick="verifyForgotPassword()">Continuar</button>
-    </div>
+    <h3 class="serif">¿Olvidaste tu contraseña?</h3>
+    <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;margin-top:0">
+      Por seguridad, la contraseña solo puede restablecerla el Sensei. Pedíselo en el dojo: te va a dar una contraseña temporal
+      y el sistema te va a pedir elegir una nueva apenas ingreses.
+    </p>
+    <div class="modal-actions"><button class="btn btn-dark" onclick="closeModal()">Entendido</button></div>
   `);
 }
-function verifyForgotPassword(){
-  const username = document.getElementById('fp-username').value.trim();
-  const dni = document.getElementById('fp-dni').value.trim();
-  const s = students.find(x=>x.username===username);
-  if(!s || !s.dni || s.dni!==dni){ toast('No encontramos un alumno con ese usuario y DNI.'); return; }
-  if(s.status!=='activo'){ toast('Este usuario está suspendido. Consultá con el Sensei.'); return; }
-  showModal(`
-    <button class="close-x" onclick="closeModal()">✕</button>
-    <h3 class="serif">Nueva contraseña</h3>
-    <p class="hint" style="margin-top:0">Para ${esc(s.name)}.</p>
-    <div class="field"><label>Nueva contraseña</label><input type="password" id="fp-new" autocomplete="off"></div>
-    <div class="field"><label>Repetila</label><input type="password" id="fp-confirm" autocomplete="off"></div>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-dark" onclick="confirmForgotPassword(${s.id})">Guardar contraseña</button>
-    </div>
-  `);
-}
-async function confirmForgotPassword(id){
-  const next = document.getElementById('fp-new').value;
-  const confirmVal = document.getElementById('fp-confirm').value;
-  if(!next){ toast('Escribí una contraseña.'); return; }
-  if(next!==confirmVal){ toast('Las contraseñas no coinciden.'); return; }
-  const s = students.find(x=>x.id===id);
-  s.passwordHash = await sha256Hex(next);
-  closeModal();
-  toast('Contraseña actualizada. Ya podés iniciar sesión.');
-}
+
+
 function openResetPasswordModal(id){
   const s = students.find(x=>x.id===id);
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">Restablecer contraseña</h3>
     <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">
-      Para <strong>${s.name}</strong> (usuario: ${s.username}). Su contraseña actual dejará de funcionar.
+      Para <strong>${esc(s.name)}</strong> (usuario: ${esc(s.username)}). Su contraseña actual dejará de funcionar, se cerrarán sus sesiones abiertas y tendrá que elegir una nueva al ingresar.
     </p>
-    <div class="field"><label>Nueva contraseña</label><input type="text" id="rp-new" placeholder="Dejá vacío para generar una automática"></div>
+    <div class="field"><label>Contraseña temporal</label><input type="text" id="rp-new" placeholder="Dejá vacío para generar una automática" autocomplete="off"></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-dark" onclick="confirmResetPassword(${id})">Restablecer</button>
+      <button class="btn btn-dark" onclick="confirmResetPassword('${id}')">Restablecer</button>
     </div>
   `);
 }
 async function confirmResetPassword(id){
   const s = students.find(x=>x.id===id);
   const typed = document.getElementById('rp-new').value.trim();
-  const temp = typed || randomTempPassword();
-  s.passwordHash = await sha256Hex(temp);
+  const r = await api('POST', `/students/${id}/reset-password`, typed ? {password:typed} : {});
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">Contraseña restablecida</h3>
     <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">
-      Nueva contraseña para <strong>${s.name}</strong> (usuario: <strong>${s.username}</strong>):
+      Contraseña temporal para <strong>${esc(s.name)}</strong> (usuario: <strong>${esc(r.username)}</strong>):
     </p>
-    <p style="font-size:22px;font-weight:700;text-align:center;letter-spacing:.04em;background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius);padding:14px;margin:10px 0;">${temp}</p>
-    <p class="hint">Comunicásela por un medio seguro. No queda guardada en ningún lado — solo se muestra esta vez.</p>
+    <p class="pw-box">${esc(r.password)}</p>
+    <p class="hint">Comunicásela por un medio seguro. No queda guardada en ningún lado — solo se muestra esta vez. Al ingresar, el sistema le va a pedir elegir una propia.</p>
     <div class="modal-actions">
       <button class="btn btn-dark" onclick="closeModal()">Listo</button>
     </div>
   `);
 }
-
 /* ============================================================
    BRANDING (logo)
 ============================================================ */
 function brandInnerHTML(){
-  if(schoolLogo) return `<img src="${schoolLogo}" alt="Logo"><span>SHURI-TE KAN</span>`;
+  if(schoolLogo) return `<img src="${esc(schoolLogo)}" alt="Logo"><span>SHURI-TE KAN</span>`;
   return `<div class="dot"></div><span>SHORIN-RYU · SHURI-TE KAN</span>`;
 }
 function refreshBranding(){
   const lb = document.getElementById('login-brandmark'); if(lb) lb.innerHTML = brandInnerHTML();
   const sb = document.querySelector('.sidebar .brand');
-  if(sb) sb.innerHTML = schoolLogo ? `<img src="${schoolLogo}" style="height:26px;max-width:150px;object-fit:contain">` : `<div class="dot"></div><span>Shuri-te Kan</span>`;
+  if(sb) sb.innerHTML = schoolLogo ? `<img src="${esc(schoolLogo)}" style="height:26px;max-width:150px;object-fit:contain">` : `<div class="dot"></div><span>Shuri-te Kan</span>`;
+  document.querySelectorAll('img[data-logo]').forEach(img=>{
+    if(schoolLogo){ img.src = schoolLogo; img.hidden = false; } else { img.hidden = true; img.removeAttribute('src'); }
+  });
 }
-refreshBranding();
-
 /* ============================================================
    SHELL / NAV
 ============================================================ */
@@ -416,14 +373,6 @@ const instructorNav = [
   {id:'foro', label:'Foro'},
   {id:'inscripcion', label:'Ficha de inscripción'},
 ];
-const alumnoNav = [
-  {id:'mi-programa', label:'Mi programa'},
-  {id:'mis-cuotas', label:'Mis cuotas'},
-  {id:'mi-asistencia', label:'Mi asistencia'},
-  {id:'biblioteca', label:'Biblioteca'},
-  {id:'foro', label:'Foro'},
-  {id:'inscripcion', label:'Ficha de inscripción'},
-];
 const grantableModules = instructorNav.concat([
   {id:'programas', label:'Programas'},
   {id:'cinturones', label:'Cinturones'},
@@ -431,34 +380,27 @@ const grantableModules = instructorNav.concat([
 const permModuleLabels = {biblioteca:'Biblioteca', asistencia:'Asistencia', pagos:'Cuotas y pagos', programas:'Programas', cinturones:'Cinturones'};
 function modulePerm(moduleId){
   if(currentRole==='admin') return 'write';
-  const s = activeStudent();
-  if(!s || !s.modulePerms || !s.modulePerms[moduleId]) return 'write';
-  return s.modulePerms[moduleId];
+  return (me && me.modules && me.modules[moduleId]) || 'none';
 }
 function canWriteModule(moduleId){ return modulePerm(moduleId)==='write'; }
 function activeNav(){
   if(currentRole==='admin') return adminNav;
-  const s = activeStudent();
-  if(!s || !s.enabledModules) return currentRole==='instructor' ? instructorNav : alumnoNav;
-  const filtered = grantableModules.filter(n=>s.enabledModules.includes(n.id));
-  return filtered.length ? filtered : (currentRole==='instructor' ? instructorNav : alumnoNav);
+  return grantableModules.filter(n=>modulePerm(n.id)!=='none');
 }
 function activeStudent(){
-  if(currentRole==='alumno') return students.find(x=>x.id===currentStudentId);
-  if(currentRole==='instructor') return students.find(x=>x.id===currentInstructorStudentId);
-  return null;
+  if(currentRole==='admin' || !me) return null;
+  return students.find(x=>x.id===me.studentId) || null;
 }
-
 function renderShell(){
   const nav = activeNav();
   const sidebar = document.getElementById('sidebar');
   let who;
   if(currentRole==='admin') who = {name:'Sensei — Administrador', sub:'Todos los dojos'};
-  else if(currentRole==='instructor'){ const s = activeStudent(); who = {name:s.name, sub:'Instructor · ' + dojoName(s.dojo)}; }
-  else { const s = activeStudent(); who = {name:s.name, sub:'Cinturón ' + beltById(s.belt).name}; }
+  else if(currentRole==='instructor'){ const s = activeStudent(); who = {name:esc(s.name), sub:'Instructor · ' + esc(dojoName(s.dojo))}; }
+  else { const s = activeStudent(); who = {name:esc(s.name), sub:'Cinturón ' + esc(beltById(s.belt).name)}; }
 
   sidebar.innerHTML = `
-    <div class="brand">${schoolLogo ? `<img src="${schoolLogo}" style="height:26px;max-width:150px;object-fit:contain">` : '<div class="dot"></div><span>Shuri-te Kan</span>'}</div>
+    <div class="brand">${schoolLogo ? `<img src="${esc(schoolLogo)}" style="height:26px;max-width:150px;object-fit:contain">` : '<div class="dot"></div><span>Shuri-te Kan</span>'}</div>
     <div class="nav-scroll">${nav.map((n,i)=>`<div class="nav-item ${i===0?'active':''}" data-nav="${n.id}" onclick="showPanel('${n.id}', this)">${n.label}</div>`).join('')}</div>
     <div class="sidebar-foot">
       <div class="who">${who.name}<small>${who.sub}</small></div>
@@ -645,28 +587,12 @@ function openExportModal(report){
     </div>
   `);
 }
-async function sha256Hex(text){
-  const enc = new TextEncoder().encode(String(text));
-  const buf = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
+
 function slugifyUsername(name){
   return normalizeText(name).replace(/[^a-z0-9\s]/g,'').trim().split(/\s+/).join('.');
 }
-function generateUniqueUsername(name, excludeId){
-  const base = slugifyUsername(name) || 'usuario';
-  let candidate = base, n = 2;
-  while(students.some(s=>s.id!==excludeId && s.username===candidate)){
-    candidate = base + n; n++;
-  }
-  return candidate;
-}
-function randomTempPassword(){
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-  let out = '';
-  for(let i=0;i<8;i++) out += chars[Math.floor(Math.random()*chars.length)];
-  return out;
-}
+
+
 function fmtDateEs(iso){
   if(!iso) return '';
   const d = new Date(iso+'T00:00:00');
@@ -687,19 +613,21 @@ function groupLabel(g){ return g==='infantil' ? 'Infantil' : 'Adulto'; }
    ADMIN · RESUMEN
 ============================================================ */
 function renderResumen(){
+  const cm = me.serverToday.slice(0,7);
+  const cmLabel = monthLabel(cm).split(' ')[0].toLowerCase();
   const activos = students.filter(s=>s.status==='activo');
-  const pendientes = payments.filter(p=>p.status==='pendiente' && p.period==='Septiembre 2026').length;
+  const pendientes = payments.filter(p=>p.status==='pendiente' && p.periodMonth===cm).length;
   const enRevision = payments.filter(p=>p.status==='revision').length;
-  const cobradoMes = payments.filter(p=>p.status==='pagada' && p.period==='Septiembre 2026').reduce((a,p)=>a+p.amount,0);
-  const gastadoMes = expenses.filter(e=>e.status==='pagado' && (e.paidOn||'').startsWith('2026-09')).reduce((a,e)=>a+e.amount,0);
+  const cobradoMes = payments.filter(p=>p.status==='pagada' && (p.paidOn||'').startsWith(cm)).reduce((a,p)=>a+p.amount,0);
+  const gastadoMes = expenses.filter(e=>e.status==='pagado' && (e.paidOn||'').startsWith(cm)).reduce((a,e)=>a+e.amount,0);
   const gastosPendientes = expenses.filter(e=>e.status==='pendiente').reduce((a,e)=>a+e.amount,0);
   const resultado = cobradoMes - gastadoMes;
-  const proximoExamen = events.filter(e=>e.type==='examen').sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const proximoExamen = events.filter(e=>e.type==='examen' && e.date>=me.serverToday).sort((a,b)=>a.date.localeCompare(b.date))[0];
   document.getElementById('panel-resumen').innerHTML = `
     <div class="main-head"><div><h1>Resumen</h1><p>Un vistazo rápido antes de empezar la clase.</p></div></div>
     <div class="cards-row">
       <div class="stat-card"><div class="num">${activos.length}</div><div class="lbl">Alumnos activos</div></div>
-      <div class="stat-card"><div class="num">${pendientes}</div><div class="lbl">Cuotas pendientes (sep.)</div></div>
+      <div class="stat-card"><div class="num">${pendientes}</div><div class="lbl">Cuotas pendientes (${cmLabel})</div></div>
       <div class="stat-card"><div class="num">${enRevision}</div><div class="lbl">Comprobantes en revisión</div></div>
       <div class="stat-card"><div class="num">${fmtMoney(cobradoMes)}</div><div class="lbl">Cobrado este mes</div></div>
       <div class="stat-card"><div class="num">${fmtMoney(gastadoMes)}</div><div class="lbl">Gastado este mes</div></div>
@@ -715,7 +643,7 @@ function renderResumen(){
         <thead><tr><th>Alumno</th><th>Cinturón</th><th>Grupo</th><th>Dojo</th></tr></thead>
         <tbody>
           ${activos.slice(0,6).map(s=>`
-            <tr><td>${esc(s.name)}</td><td>${beltChip(s.belt)}</td><td>${groupLabel(s.group)}</td><td>${dojoName(s.dojo)}</td></tr>
+            <tr><td>${esc(s.name)}</td><td>${beltChip(s.belt)}</td><td>${groupLabel(s.group)}</td><td>${esc(dojoName(s.dojo))}</td></tr>
           `).join('')}
         </tbody>
       </table>
@@ -740,9 +668,9 @@ function upcomingBirthdays(){
 }
 function beltChip(beltId){
   const b = beltById(beltId);
-  return `<span class="belt-chip">${beltDotHtml(b)}${b.name}</span>`;
+  if(!b) return '<span class="belt-chip">—</span>';
+  return `<span class="belt-chip">${beltDotHtml(b)}${esc(b.name)}</span>`;
 }
-
 /* ============================================================
    ADMIN · ALUMNOS
 ============================================================ */
@@ -778,9 +706,9 @@ function renderAlumnos(){
 }
 function avatarHtml(s, size){
   size = size || 28;
-  if(s.photo) return `<img src="${s.photo}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex-shrink:0;">`;
+  if(s.photo) return `<img src="${esc(s.photo)}" alt="" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex-shrink:0;">`;
   const initial = (s.name||'?').trim().charAt(0).toUpperCase();
-  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:var(--shu-tint);color:var(--shu-deep);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.round(size*0.45)}px;flex-shrink:0;">${initial}</div>`;
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:var(--shu-tint);color:var(--shu-deep);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.round(size*0.45)}px;flex-shrink:0;">${esc(initial)}</div>`;
 }
 function paintAlumnos(){
   const list = students.filter(s=>
@@ -794,9 +722,9 @@ function paintAlumnos(){
   }
   document.getElementById('alumnos-body').innerHTML = list.map(s=>`
     <tr class="${s.status==='suspendido'?'suspended':''}">
-      <td><div class="name-cell">${avatarHtml(s)}<span>${s.name}</span></div></td>
+      <td><div class="name-cell">${avatarHtml(s)}<span>${esc(s.name)}</span></div></td>
       <td>${beltChip(s.belt)}</td>
-      <td>${groupLabel(s.group)} · ${dojoName(s.dojo)}</td>
+      <td>${groupLabel(s.group)} · ${esc(dojoName(s.dojo))}</td>
       <td>
         ${s.status==='activo' ? '<span class="tag tag-ok">Activo</span>' : '<span class="tag tag-off">Suspendido</span>'}
         ${s.isInstructor ? '<span class="tag tag-review">Instructor</span>' : ''}
@@ -804,8 +732,8 @@ function paintAlumnos(){
       </td>
       <td>
         <div class="actions-cell">
-          <button class="btn-ghost" onclick="openStudentForm(${s.id})">Editar ficha</button>
-          <button class="btn-ghost" onclick="openRowMenu(${s.id})">Más ▾</button>
+          <button class="btn-ghost" onclick="openStudentForm('${s.id}')">Editar ficha</button>
+          <button class="btn-ghost" onclick="openRowMenu('${s.id}')">Más ▾</button>
         </div>
       </td>
     </tr>
@@ -816,7 +744,7 @@ function openRowMenu(id){
   const hasMedInfo = s.allergies || s.emergencyContact || s.emergencyPhone;
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
-    <h3 class="serif" style="display:flex;align-items:center;gap:10px;">${avatarHtml(s,32)}${s.name}</h3>
+    <h3 class="serif" style="display:flex;align-items:center;gap:10px;">${avatarHtml(s,32)}${esc(s.name)}</h3>
     ${hasMedInfo ? `
     <div class="info-card" style="margin-bottom:16px;">
       <strong>Ficha médica</strong>
@@ -825,48 +753,49 @@ function openRowMenu(id){
     </div>
     ` : ''}
     <div class="row-menu">
-      <button class="btn-ghost" onclick="closeModal();openActivitiesManager(${id})">Registrar actividades</button>
-      <button class="btn-ghost" onclick="closeModal();openResetPasswordModal(${id})">Restablecer contraseña</button>
-      <button class="btn-ghost" onclick="closeModal();toggleStudentStatus(${id})">${s.status==='activo'?'Suspender':'Reactivar'}</button>
-      <button class="btn-ghost" onclick="closeModal();toggleInstructor(${id})">${s.isInstructor?'Quitar instructor':'Marcar instructor'}</button>
-      <button class="btn-ghost" onclick="closeModal();openScholarshipModal(${id})">${s.scholarship&&s.scholarship.active?'Editar beca':'Marcar becado'}</button>
-      <button class="btn-ghost danger" onclick="closeModal();openDeleteStudentModal(${id})">Eliminar alumno</button>
+      <button class="btn-ghost" onclick="closeModal();openActivitiesManager('${id}')">Registrar actividades</button>
+      <button class="btn-ghost" onclick="closeModal();openResetPasswordModal('${id}')">Restablecer contraseña</button>
+      <button class="btn-ghost" onclick="closeModal();toggleStudentStatus('${id}')">${s.status==='activo'?'Suspender':'Reactivar'}</button>
+      <button class="btn-ghost" onclick="closeModal();toggleInstructor('${id}')">${s.isInstructor?'Quitar instructor':'Marcar instructor'}</button>
+      <button class="btn-ghost" onclick="closeModal();openScholarshipModal('${id}')">${s.scholarship&&s.scholarship.active?'Editar beca':'Marcar becado'}</button>
+      <button class="btn-ghost danger" onclick="closeModal();openDeleteStudentModal('${id}')">Eliminar alumno</button>
     </div>
   `);
 }
-function toggleStudentStatus(id){
+async function toggleStudentStatus(id){
   const s = students.find(x=>x.id===id);
-  s.status = s.status==='activo' ? 'suspendido' : 'activo';
+  const r = await api('POST', `/students/${id}/status`, {status: s.status==='activo' ? 'suspendido' : 'activo'});
+  upsertById(students, r.student);
   paintAlumnos();
-  toast(s.status==='activo' ? `${s.name} fue reactivado.` : `${s.name} fue suspendido. Sigue en el sistema, pero no aparece para tomar asistencia.`);
+  toast(r.student.status==='activo' ? `${r.student.name} fue reactivado.` : `${r.student.name} fue suspendido. Sigue en el sistema, pero no puede ingresar ni aparece para tomar asistencia.`);
 }
-function toggleInstructor(id){
+async function toggleInstructor(id){
   const s = students.find(x=>x.id===id);
-  s.isInstructor = !s.isInstructor;
-  if(s.isInstructor && s.enabledModules){
-    ['asistencia','pagos'].forEach(m=>{ if(!s.enabledModules.includes(m)) s.enabledModules.push(m); });
-  }
-  refreshLoginSelects();
+  const r = await api('POST', `/students/${id}/instructor`, {isInstructor: !s.isInstructor});
+  upsertById(students, r.student);
   paintAlumnos();
-  toast(s.isInstructor ? `${s.name} ahora también puede entrar como instructor.` : `${s.name} ya no tiene acceso como instructor.`);
+  toast(r.student.isInstructor ? `${r.student.name} ahora también puede entrar como instructor.` : `${r.student.name} ya no tiene acceso como instructor.`);
 }
 function openScholarshipModal(id){
   const s = students.find(x=>x.id===id);
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
-    <h3 class="serif">Beca de ${s.name.split(' ')[0]}</h3>
+    <h3 class="serif">Beca de ${esc(s.name.split(' ')[0])}</h3>
     <div class="checkline"><input type="checkbox" id="sch-active" ${s.scholarship&&s.scholarship.active?'checked':''}> <label for="sch-active">Alumno becado</label></div>
     <div class="field"><label>Valor diferencial de la cuota</label><input type="text" id="sch-amount" value="${s.scholarship?s.scholarship.amount:0}"></div>
     <p class="hint">Este valor reemplaza al de cuota por defecto cuando se registre su pago mensual.</p>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-dark" onclick="saveScholarship(${id})">Guardar</button>
+      <button class="btn btn-dark" onclick="saveScholarship('${id}')">Guardar</button>
     </div>
   `);
 }
-function saveScholarship(id){
-  const s = students.find(x=>x.id===id);
-  s.scholarship = { active: document.getElementById('sch-active').checked, amount: Math.max(0, parseFloat(document.getElementById('sch-amount').value)||0) };
+async function saveScholarship(id){
+  const r = await api('PUT', `/students/${id}/scholarship`, {
+    active: document.getElementById('sch-active').checked,
+    amount: document.getElementById('sch-amount').value,
+  });
+  upsertById(students, r.student);
   closeModal(); paintAlumnos();
   toast('Beca actualizada.');
 }
@@ -1006,7 +935,7 @@ function renderDiplomasPanel(){
       <div class="field">
         <label>Firma escaneada (opcional)</label>
         <div class="logo-row">
-          <div class="logo-preview" id="dc-signature-preview" style="width:120px;height:50px;">${diplomaConfig.signatureImage?`<img src="${diplomaConfig.signatureImage}" style="width:100%;height:100%;object-fit:contain;">`:'Sin firma'}</div>
+          <div class="logo-preview" id="dc-signature-preview" style="width:120px;height:50px;">${diplomaConfig.signatureImage?`<img src="${esc(diplomaConfig.signatureImage)}" style="width:100%;height:100%;object-fit:contain;">`:'Sin firma'}</div>
           <div>
             <input type="file" accept="image/*" id="dc-signature-input" onchange="onSignatureSelected(this)">
             <div style="margin-top:8px"><button type="button" class="btn-ghost" onclick="clearSignatureImage()">Quitar firma</button></div>
@@ -1054,7 +983,7 @@ function renderDiplomasPanel(){
       <div class="field">
         <label>Nombre de la persona</label>
         <input type="text" id="cc-name" list="cc-student-options" placeholder="Elegí un alumno de la lista o escribí otro nombre" autocomplete="off" onchange="onCcNameChange()">
-        <datalist id="cc-student-options">${students.map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist>
+        <datalist id="cc-student-options">${students.filter(s=>s.status==='activo').map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist>
       </div>
       <div class="grid2">
         <div class="field"><label>Tipo de certificado</label>
@@ -1112,34 +1041,34 @@ function paintDiplomasLog(){
     </tr>
   `).join('') : `<tr><td colspan="5" class="att-empty">Todavía no se emitió ningún diploma.</td></tr>`;
 }
-function saveDiplomaConfig(){
-  diplomaConfig.style = document.getElementById('dc-style').value;
-  diplomaConfig.paperSize = document.getElementById('dc-paperSize').value;
-  diplomaConfig.titleExamen = document.getElementById('dc-titleExamen').value.trim() || diplomaConfig.titleExamen;
-  diplomaConfig.introText = document.getElementById('dc-introText').value.trim() || diplomaConfig.introText;
-  diplomaConfig.bodyExamen = document.getElementById('dc-bodyExamen').value.trim() || diplomaConfig.bodyExamen;
-  diplomaConfig.bodyGeneral = document.getElementById('dc-bodyGeneral').value.trim() || diplomaConfig.bodyGeneral;
-  diplomaConfig.titleSize = parseInt(document.getElementById('dc-titleSize').value) || diplomaConfig.titleSize;
-  diplomaConfig.nameSize = parseInt(document.getElementById('dc-nameSize').value) || diplomaConfig.nameSize;
-  diplomaConfig.gradeSize = parseInt(document.getElementById('dc-gradeSize').value) || diplomaConfig.gradeSize;
-  diplomaConfig.dateSize = parseInt(document.getElementById('dc-dateSize').value) || diplomaConfig.dateSize;
-  diplomaConfig.textSize = parseInt(document.getElementById('dc-textSize').value) || diplomaConfig.textSize;
-  diplomaConfig.showTenure = document.getElementById('dc-showTenure').checked;
-  diplomaConfig.showQr = document.getElementById('dc-showQr').checked;
+async function saveDiplomaConfig(){
+  const num = id=>parseInt(document.getElementById(id).value);
+  const r = await api('PUT', '/diplomas/config', {
+    style: document.getElementById('dc-style').value,
+    paperSize: document.getElementById('dc-paperSize').value,
+    titleExamen: document.getElementById('dc-titleExamen').value.trim(),
+    introText: document.getElementById('dc-introText').value.trim(),
+    bodyExamen: document.getElementById('dc-bodyExamen').value.trim(),
+    bodyGeneral: document.getElementById('dc-bodyGeneral').value.trim(),
+    titleSize: num('dc-titleSize'), nameSize: num('dc-nameSize'), gradeSize: num('dc-gradeSize'),
+    dateSize: num('dc-dateSize'), textSize: num('dc-textSize'),
+    showTenure: document.getElementById('dc-showTenure').checked,
+    showQr: document.getElementById('dc-showQr').checked,
+  });
+  diplomaConfig = r.diplomaConfig;
   toast('Configuración de diplomas actualizada.');
 }
-function onSignatureSelected(input){
+async function onSignatureSelected(input){
   const file = input.files[0];
   if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e=>{
-    diplomaConfig.signatureImage = e.target.result;
-    document.getElementById('dc-signature-preview').innerHTML = `<img src="${diplomaConfig.signatureImage}" style="width:100%;height:100%;object-fit:contain;">`;
-    toast('Firma actualizada.');
-  };
-  reader.readAsDataURL(file);
+  const up = await uploadFile(file, 'signature');
+  const r = await api('PUT', '/settings/signature', {fileId: up.id});
+  diplomaConfig.signatureImage = r.url;
+  document.getElementById('dc-signature-preview').innerHTML = `<img src="${esc(r.url)}" style="width:100%;height:100%;object-fit:contain;">`;
+  toast('Firma actualizada.');
 }
-function clearSignatureImage(){
+async function clearSignatureImage(){
+  await api('PUT', '/settings/signature', {fileId: null});
   diplomaConfig.signatureImage = null;
   document.getElementById('dc-signature-preview').innerHTML = 'Sin firma';
   toast('Firma eliminada.');
@@ -1179,7 +1108,7 @@ function paintDiplomasList(){
       <td>${fmtDateEs(r.a.date)}</td>
       <td>${esc(r.a.activity)}</td>
       <td><span class="tag tag-off">${activityTypeLabel(r.a.type)}</span></td>
-      <td><button class="btn btn-sm btn-dark" onclick="openDiploma(${r.studentId},'${r.a.id}')">Generar</button></td>
+      <td><button class="btn btn-sm btn-dark" onclick="openDiploma('${r.studentId}','${r.a.id}')">Generar</button></td>
     </tr>
   `;}).join('') : `<tr><td colspan="6" class="att-empty">Todavía no hay actividades con diploma disponible (un examen aprobado, seminario, exhibición, etc.).</td></tr>`;
   updateBatchButton();
@@ -1220,17 +1149,17 @@ function openBatchConfirm(){
     </div>
   `);
 }
-function generateBatchDiplomas(){
+async function generateBatchDiplomas(){
   const rows = allDiplomaEligibleRows().filter(r=>diplomaBatchSelection.has(r.studentId+':'+r.a.id));
   if(rows.length===0){ toast('No se encontraron las actividades seleccionadas.'); closeModal(); return; }
+  const r = await api('POST', '/diplomas/issue', {items: rows.map(x=>({activityId: x.a.id}))});
+  issuedDiplomas.push(...r.issued); nextDiplomaNumber = r.nextDiplomaNumber;
   setPrintPageSize(diplomaConfig.paperSize, 'landscape');
-  const issuedOn = todayIso();
-  const pages = rows.map((r,i)=>{
-    const s = students.find(x=>x.id===r.studentId);
-    const number = nextDiplomaNumber++;
-    issuedDiplomas.push({number, studentId:r.studentId, studentName:s.name, activity:r.a.activity, type:r.a.type, date:r.a.date, issuedOn});
+  const pages = rows.map((row,i)=>{
+    const s = students.find(x=>x.id===row.studentId);
+    const d = r.issued[i];
     const pageBreak = i < rows.length-1 ? 'page-break-after:always;' : '';
-    return `<div class="diploma" style="${pageBreak}">${buildDiplomaHtml(s, r.a, {}, number)}</div>`;
+    return `<div class="diploma" style="${pageBreak}">${buildDiplomaHtml(s, row.a, {}, d.number, d.verifyCode)}</div>`;
   }).join('');
   document.getElementById('print-area').innerHTML = pages;
   renderDiplomaQrCodes(document.getElementById('print-area'));
@@ -1248,7 +1177,7 @@ function activityRowHtml(a, editable){
     <td><span class="tag tag-off">${activityTypeLabel(a.type)}</span></td>
     <td>${esc(a.place)||'—'}</td>
     <td>${esc(a.notes) || (a.result ? (a.result==='aprobado'?'Aprobado':'No aprobado') : '—')}</td>
-    ${editable ? `<td><button class="btn-ghost" onclick="openActivityForm(${a.studentId},'${a.id}')">Editar</button><button class="btn-ghost" onclick="deleteActivity(${a.studentId},'${a.id}')">Eliminar</button></td>` : ''}
+    ${editable ? `<td><button class="btn-ghost" onclick="openActivityForm('${a.studentId}','${a.id}')">Editar</button><button class="btn-ghost" onclick="deleteActivity('${a.studentId}','${a.id}')">Eliminar</button></td>` : ''}
   </tr>`;
 }
 function openActivitiesManager(studentId){
@@ -1258,9 +1187,9 @@ function openActivitiesManager(studentId){
   const s = students.find(x=>x.id===studentId);
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
-    <h3 class="serif">Actividades de ${s.name}</h3>
-    <button class="btn btn-dark" style="margin-bottom:12px" onclick="openActivityForm(${studentId})">+ Agregar actividad</button>
-    <button class="btn" style="margin-bottom:12px;margin-left:8px" onclick="openStudentActivitiesExport(${studentId})">Exportar / Descargar</button>
+    <h3 class="serif">Actividades de ${esc(s.name)}</h3>
+    <button class="btn btn-dark" style="margin-bottom:12px" onclick="openActivityForm('${studentId}')">+ Agregar actividad</button>
+    <button class="btn" style="margin-bottom:12px;margin-left:8px" onclick="openStudentActivitiesExport('${studentId}')">Exportar / Descargar</button>
     ${activitiesToolbarHtml()}
     <div class="table-wrap" style="max-height:340px;overflow:auto;">
       <table>
@@ -1290,17 +1219,17 @@ function openActivityForm(studentId, activityId){
   const nextBelt = list[idx+1];
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
-    <h3 class="serif">${a?'Editar':'Registrar'} actividad de ${s.name.split(' ')[0]}</h3>
+    <h3 class="serif">${a?'Editar':'Registrar'} actividad de ${esc(s.name.split(' ')[0])}</h3>
     <div class="field"><label>Tipo de actividad</label>
       <select id="act-type" onchange="onActivityTypeChange()">
         ${activityTypes.map(t=>`<option value="${t.id}" ${(a?a.type:'examen')===t.id?'selected':''}>${t.label}</option>`).join('')}
       </select>
     </div>
     <div id="act-exam-fields" style="display:none">
-      <p class="hint" style="margin-top:0">Cinturón actual: ${list[idx].name}${nextBelt ? ' · próximo: '+nextBelt.name : ' · ya alcanzó el grado máximo'}</p>
+      <p class="hint" style="margin-top:0">Cinturón actual: ${esc(list[idx].name)}${nextBelt ? ' · próximo: '+esc(nextBelt.name) : ' · ya alcanzó el grado máximo'}</p>
       <div class="field"><label>Cinturón evaluado</label>
         <select id="act-belt">
-          ${list.map((b,i)=>`<option value="${b.id}" ${(a&&a.belt ? a.belt===b.id : (nextBelt?b.id===nextBelt.id:i===idx)) ? 'selected':''}>${b.name}</option>`).join('')}
+          ${list.map((b,i)=>`<option value="${b.id}" ${(a&&a.belt ? a.belt===b.id : (nextBelt?b.id===nextBelt.id:i===idx)) ? 'selected':''}>${esc(b.name)}</option>`).join('')}
         </select>
       </div>
       <div class="field"><label>Resultado</label>
@@ -1311,14 +1240,14 @@ function openActivityForm(studentId, activityId){
       </div>
       <p class="hint">Si el resultado es "Aprobado", el cinturón evaluado pasa a ser el cinturón actual del alumno.</p>
     </div>
-    <div class="field"><label>Nombre o descripción de la actividad</label><input type="text" id="act-title" value="${a?a.activity:''}" placeholder="Ej: Entrenamiento especial con instructor invitado"></div>
+    <div class="field"><label>Nombre o descripción de la actividad</label><input type="text" id="act-title" value="${a?esc(a.activity):''}" placeholder="Ej: Entrenamiento especial con instructor invitado"></div>
     <div class="field"><label>Fecha</label><input type="date" id="act-date" value="${a?a.date:todayIso()}"></div>
-    <div class="field"><label>Lugar (opcional)</label><input type="text" id="act-place" value="${a?a.place||'':''}"></div>
-    <div class="field"><label>Instructor / organizador (opcional)</label><input type="text" id="act-instructor" value="${a?a.instructor||'':''}"></div>
-    <div class="field"><label>Observaciones (opcional)</label><textarea id="act-notes">${a?a.notes||'':''}</textarea></div>
+    <div class="field"><label>Lugar (opcional)</label><input type="text" id="act-place" value="${a?esc(a.place||''):''}"></div>
+    <div class="field"><label>Instructor / organizador (opcional)</label><input type="text" id="act-instructor" value="${a?esc(a.instructor||''):''}"></div>
+    <div class="field"><label>Observaciones (opcional)</label><textarea id="act-notes">${a?esc(a.notes||''):''}</textarea></div>
     <div class="modal-actions">
-      <button class="btn" onclick="openActivitiesManager(${studentId})">Cancelar</button>
-      <button class="btn btn-dark" onclick="saveActivity(${studentId}${activityId?`,'${activityId}'`:''})">Guardar</button>
+      <button class="btn" onclick="openActivitiesManager('${studentId}')">Cancelar</button>
+      <button class="btn btn-dark" onclick="saveActivity('${studentId}'${activityId?`,'${activityId}'`:''})">Guardar</button>
     </div>
   `);
   onActivityTypeChange();
@@ -1340,15 +1269,14 @@ function onActivityTypeChange(){
     }
   }
 }
-function saveActivity(studentId, activityId){
-  const s = students.find(x=>x.id===studentId);
+async function saveActivity(studentId, activityId){
   const type = document.getElementById('act-type').value;
   const activity = document.getElementById('act-title').value.trim();
   const date = document.getElementById('act-date').value;
   if(!activity){ toast('Escribí el nombre o descripción de la actividad.'); return; }
   if(!date){ toast('Elegí la fecha.'); return; }
   const record = {
-    type, activity, date,
+    studentId, type, activity, date,
     place: document.getElementById('act-place').value.trim(),
     instructor: document.getElementById('act-instructor').value.trim(),
     notes: document.getElementById('act-notes').value.trim(),
@@ -1356,37 +1284,26 @@ function saveActivity(studentId, activityId){
   if(type==='examen'){
     record.belt = document.getElementById('act-belt').value;
     record.result = document.getElementById('act-result').value;
-    if(record.result==='aprobado'){ s.belt = record.belt; s.since = date; }
   }
-  if(!s.activities) s.activities = [];
-  if(activityId){
-    const existing = s.activities.find(x=>x.id===activityId);
-    Object.assign(existing, record);
-  } else {
-    s.activities.push({id:'a'+(nextActivityId++), ...record});
-  }
+  const r = activityId ? await api('PUT', '/activities/'+activityId, record) : await api('POST', '/activities', record);
+  upsertById(students, r.student);
   paintAlumnos();
   toast(activityId ? 'Actividad actualizada.' : 'Actividad registrada.');
   openActivitiesManager(studentId);
 }
-function deleteActivity(studentId, activityId){
-  const s = students.find(x=>x.id===studentId);
-  s.activities = s.activities.filter(x=>x.id!==activityId);
+async function deleteActivity(studentId, activityId){
+  const r = await api('DELETE', '/activities/'+activityId);
+  upsertById(students, r.student);
   paintAlumnos();
   toast('Actividad eliminada.');
   paintActivitiesManager(studentId);
 }
-
-let pendingStudentPhoto = undefined;
+let pendingStudentPhoto = undefined; // undefined = sin cambios · null = quitar foto · File = foto nueva
 function onStudentPhotoSelected(input){
   const file = input.files[0];
   if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e=>{
-    pendingStudentPhoto = e.target.result;
-    document.getElementById('sf-photo-preview').innerHTML = `<img src="${pendingStudentPhoto}" style="width:100%;height:100%;object-fit:cover;">`;
-  };
-  reader.readAsDataURL(file);
+  pendingStudentPhoto = file;   // se sube al guardar la ficha
+  document.getElementById('sf-photo-preview').innerHTML = `<img src="${URL.createObjectURL(file)}" style="width:100%;height:100%;object-fit:cover;">`;
 }
 function clearStudentPhoto(){
   pendingStudentPhoto = null;
@@ -1402,7 +1319,7 @@ function openStudentForm(id){
     <div class="field">
       <label>Foto (opcional)</label>
       <div class="logo-row">
-        <div class="logo-preview" id="sf-photo-preview" style="width:64px;height:64px;border-radius:50%;overflow:hidden;">${s&&s.photo?`<img src="${s.photo}" style="width:100%;height:100%;object-fit:cover;">`:'Sin foto'}</div>
+        <div class="logo-preview" id="sf-photo-preview" style="width:64px;height:64px;border-radius:50%;overflow:hidden;">${s&&s.photo?`<img src="${esc(s.photo)}" style="width:100%;height:100%;object-fit:cover;">`:'Sin foto'}</div>
         <div>
           <input type="file" accept="image/*" id="sf-photo-input" onchange="onStudentPhotoSelected(this)">
           ${s&&s.photo?'<div style="margin-top:8px"><button type="button" class="btn-ghost" onclick="clearStudentPhoto()">Quitar foto</button></div>':''}
@@ -1417,7 +1334,7 @@ function openStudentForm(id){
         </select>
       </div>
       <div class="field"><label>Dojo</label>
-        <select id="sf-dojo">${dojos.map(d=>`<option value="${d.id}" ${s&&s.dojo===d.id?'selected':''}>${d.name}</option>`).join('')}</select>
+        <select id="sf-dojo">${dojos.map(d=>`<option value="${d.id}" ${s&&s.dojo===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}</select>
       </div>
     </div>
     <div class="field"><label>Cinturón</label>
@@ -1442,7 +1359,7 @@ function openStudentForm(id){
       <div class="field"><label>DNI</label><input type="text" id="sf-dni" value="${s?esc(s.dni||''):''}" ${s?'':'placeholder="Se usa como contraseña inicial"'}></div>
       <div class="field"><label>Usuario</label><input type="text" id="sf-username" value="${s?esc(s.username||''):''}" placeholder="se genera del nombre"></div>
     </div>
-    ${!s ? '<p class="hint" style="margin-top:-8px">El Senpai/Kohai va a poder iniciar sesión con este usuario y su DNI como contraseña inicial.</p>' : ''}
+    ${!s ? '<p class="hint" style="margin-top:-8px">El Senpai/Kohai va a poder iniciar sesión con este usuario y su DNI como contraseña inicial; el sistema le va a pedir cambiarla la primera vez. Sin DNI, se genera una contraseña temporal.</p>' : ''}
     ${s ? `
     <div class="field">
       <label>Módulos habilitados</label>
@@ -1451,7 +1368,7 @@ function openStudentForm(id){
           <label class="check-row"><input type="checkbox" class="sf-module" value="${n.id}" ${(s.enabledModules||[]).includes(n.id)?'checked':''}> ${n.label}</label>
         `).join('')}
       </div>
-      <p class="hint" style="margin-top:6px;margin-bottom:0;">Solo el Sensei puede cambiar esto — podés sumarle a ${s.name.split(' ')[0]} módulos que no traiga por defecto (por ej. Asistencia o Cuotas y pagos aunque no sea instructor).</p>
+      <p class="hint" style="margin-top:6px;margin-bottom:0;">Solo el Sensei puede cambiar esto — podés sumarle a ${esc(s.name.split(' ')[0])} módulos que no traiga por defecto (por ej. Asistencia o Cuotas y pagos aunque no sea instructor).</p>
     </div>
     ${s.isInstructor ? `
     <div class="field">
@@ -1472,22 +1389,13 @@ function openStudentForm(id){
     ` : ''}
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-dark" onclick="saveStudentForm(${s?s.id:'null'})">${s?'Guardar cambios':'Dar de alta'}</button>
+      <button class="btn btn-dark" onclick="saveStudentForm(${s?`'${s.id}'`:'null'})">${s?'Guardar cambios':'Dar de alta'}</button>
     </div>
   `);
 }
 async function saveStudentForm(id){
   const name = document.getElementById('sf-name').value.trim();
   if(!name){ toast('Completá al menos el nombre.'); return; }
-  if(students.some(s=>s.id!==id && s.name===name && s.status==='activo')){
-    toast(`Ya hay un alumno activo llamado "${name}" — se van a poder distinguir por dojo donde haga falta elegir uno.`);
-  }
-  const dni = document.getElementById('sf-dni').value.trim();
-  let username = slugifyUsername(document.getElementById('sf-username').value.trim() || name);
-  if(students.some(s=>s.id!==id && s.username===username)){
-    username = generateUniqueUsername(username, id);
-    toast(`Ese usuario ya existía, se asignó "${username}".`);
-  }
   const data = {
     name,
     belt: document.getElementById('sf-belt').value,
@@ -1501,32 +1409,47 @@ async function saveStudentForm(id){
     allergies: document.getElementById('sf-allergies').value.trim(),
     emergencyContact: document.getElementById('sf-emergencyContact').value.trim(),
     emergencyPhone: document.getElementById('sf-emergencyPhone').value.trim(),
-    dni,
-    username,
+    dni: document.getElementById('sf-dni').value.trim(),
+    username: document.getElementById('sf-username').value.trim(),
   };
   const moduleEls = document.querySelectorAll('.sf-module');
-  if(moduleEls.length){
-    data.enabledModules = Array.from(moduleEls).filter(el=>el.checked).map(el=>el.value);
-  }
+  if(moduleEls.length) data.enabledModules = Array.from(moduleEls).filter(el=>el.checked).map(el=>el.value);
   const permEls = document.querySelectorAll('.sf-perm');
   if(permEls.length){
     const perms = {};
     permEls.forEach(el=>{ perms[el.dataset.mod] = el.value; });
     data.modulePerms = perms;
   }
-  if(pendingStudentPhoto !== undefined) data.photo = pendingStudentPhoto;
-  if(id){
-    const s = students.find(x=>x.id===id);
-    Object.assign(s, data);
-    toast(`${s.name} fue actualizado.`);
-  } else {
-    const passwordHash = await sha256Hex(dni || randomTempPassword());
-    students.push({id:nextStudentId++, status:'activo', isInstructor:false, scholarship:{active:false, amount:0}, activities:[], photo:null, passwordHash, enabledModules:['mi-programa','mis-cuotas','mi-asistencia','biblioteca','foro','inscripcion'], ...data});
-    toast(`${data.name} fue dado de alta. Usuario: ${username}`);
+  const result = id ? await api('PUT', '/students/'+id, data) : await api('POST', '/students', data);
+  let student = result.student;
+  // La foto es un archivo aparte: primero se sube y después se asigna a la ficha.
+  if(pendingStudentPhoto === null && student.photo){
+    student = (await api('PUT', '/students/'+student.id, {photoFileId:null})).student;
+  } else if(pendingStudentPhoto instanceof File){
+    const up = await uploadFile(pendingStudentPhoto, 'student_photo', 'studentId='+student.id);
+    student = (await api('PUT', '/students/'+student.id, {photoFileId:up.id})).student;
   }
-  refreshLoginSelects();
+  upsertById(students, student);
+  pendingStudentPhoto = undefined;
   closeModal();
   paintAlumnos();
+  if(!id){
+    if(result.duplicateName) toast(`Ya había un alumno activo llamado "${name}". Se distinguen por dojo y fecha donde haga falta elegir uno.`);
+    showNewStudentCredentials(student, result);
+  } else {
+    toast(result.usernameChanged ? `${student.name} fue actualizado. Su usuario ahora es "${result.usernameChanged}".` : `${student.name} fue actualizado.`);
+  }
+}
+function showNewStudentCredentials(student, result){
+  showModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 class="serif">${esc(student.name)} fue dado de alta</h3>
+    <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">Usuario: <strong>${esc(result.username)}</strong></p>
+    ${result.passwordIsDni
+      ? `<p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">Contraseña inicial: <strong>su DNI</strong>. El sistema le va a pedir cambiarla la primera vez que ingrese.</p>`
+      : `<p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">Contraseña temporal (no se vuelve a mostrar):</p><p class="pw-box">${esc(result.initialPassword)}</p>`}
+    <div class="modal-actions"><button class="btn btn-dark" onclick="closeModal()">Listo</button></div>
+  `);
 }
 function openDeleteStudentModal(id){
   const s = students.find(x=>x.id===id);
@@ -1534,35 +1457,38 @@ function openDeleteStudentModal(id){
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">Eliminar alumno</h3>
     <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">
-      Vas a eliminar a <strong>${s.name}</strong> del sistema. Esta acción no se puede deshacer.
+      Vas a eliminar a <strong>${esc(s.name)}</strong> del sistema. Esta acción no se puede deshacer.
       Si preferís conservar su historial de pagos y asistencias, usá "Suspender" en lugar de eliminar.
     </p>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-dark" style="background:var(--shu-deep);border-color:var(--shu-deep)" onclick="deleteStudentConfirmed(${id})">Eliminar definitivamente</button>
+      <button class="btn btn-dark" style="background:var(--shu-deep);border-color:var(--shu-deep)" onclick="deleteStudentConfirmed('${id}')">Eliminar definitivamente</button>
     </div>
   `);
 }
-function deleteStudentConfirmed(id){
+async function deleteStudentConfirmed(id){
   const s = students.find(x=>x.id===id);
+  await api('DELETE', '/students/'+id);
   students = students.filter(x=>x.id!==id);
-  refreshLoginSelects();
+  payments = payments.filter(x=>x.studentId!==id);
   closeModal();
   paintAlumnos();
   toast(`${s.name} fue eliminado del sistema.`);
 }
-
 /* ============================================================
    ADMIN/INSTRUCTOR · PAGOS
 ============================================================ */
 let pagosFilter = {q:'', period:'', estado:''};
 let pagosSort = {col:null, dir:'asc'};
 function renderPagos(){
-  if(currentRole==='instructor' && !canWriteModule('pagos')){ renderMisCuotas('panel-pagos'); return; }
+  if(currentRole!=='admin' && !canWriteModule('pagos')){ renderMisCuotas('panel-pagos'); return; }
   const periods = Array.from(new Set(payments.map(p=>p.period))).sort((a,b)=>a.localeCompare(b,'es'));
   document.getElementById('panel-pagos').innerHTML = `
     <div class="main-head"><div><h1>Cuotas y pagos</h1><p>Cuotas, adelantos, mesas de examen y cinturones — con medio de pago y recibo.</p></div>
-      <button class="btn btn-dark" onclick="openNewPaymentModal()">+ Registrar pago</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        ${currentRole==='admin' ? '<button class="btn" onclick="openGenerateMonthlyModal()">Generar cuotas del mes</button>' : ''}
+        <button class="btn btn-dark" onclick="openNewPaymentModal()">+ Registrar pago</button>
+      </div>
     </div>
     <div class="toolbar">
       <input class="search" placeholder="Buscar alumno…" value="${esc(pagosFilter.q)}" oninput="pagosFilter.q=this.value;paintPagos();">
@@ -1630,14 +1556,14 @@ function paintPagos(){
       accion = `<button class="btn btn-sm btn-dark" onclick="openPaymentModal('${p.id}')">Registrar pago</button>`;
     } else if(p.status==='revision'){
       estadoTag = '<span class="tag tag-review">En revisión</span>';
-      accion = `<button class="btn btn-sm btn-dark" onclick="confirmProofPayment('${p.id}')">Confirmar pago</button>`;
+      accion = `${p.proofUrl ? `<a class="btn-ghost" href="${esc(p.proofUrl)}" target="_blank" rel="noopener">Ver comprobante</a>` : ''}<button class="btn btn-sm btn-dark" onclick="confirmProofPayment('${p.id}')">Confirmar pago</button>`;
     } else {
-      estadoTag = `<span class="tag tag-ok">Pagada · ${p.paidOn}</span>`;
+      estadoTag = `<span class="tag tag-ok">Pagada · ${esc(p.paidOn)}</span>`;
       accion = `<button class="btn-ghost" onclick="openReceiptModal('${p.id}')">Ver recibo</button>`;
     }
     return `<tr>
-      <td>${s.name}</td><td>${esc(p.concept)}</td><td>${esc(p.period)}</td><td>${fmtMoney(p.amount)}</td>
-      <td>${p.status==='pagada' ? `<span class="tag ${p.medium==='Físico'?'tag-warn':'tag-ok'}">${p.medium}</span>` : (p.status==='revision' ? `<span class="tag tag-review">${p.proofMedium}</span>` : '—')}</td>
+      <td>${esc(s.name)}</td><td>${esc(p.concept)}</td><td>${esc(p.period)}</td><td>${fmtMoney(p.amount)}</td>
+      <td>${p.status==='pagada' ? `<span class="tag ${p.medium==='Físico'?'tag-warn':'tag-ok'}">${esc(p.medium)}</span>` : (p.status==='revision' ? `<span class="tag tag-review">${esc(p.proofMedium)}</span>` : '—')}</td>
       <td>${estadoTag}</td>
       <td>${accion}</td>
     </tr>`;
@@ -1661,16 +1587,33 @@ function openPagosExport(){
   });
   openExportModal({title:'Informe de cuotas y pagos', periodLabel:pagosPeriodLabel(), headers:header, rows, filenameBase:'cuotas_y_pagos'});
 }
-function confirmProofPayment(paymentId){
-  const p = payments.find(x=>x.id===paymentId);
-  p.status = 'pagada';
-  p.medium = 'Electrónico';
-  p.method = p.proofMedium + ' (comprobante del alumno)';
-  p.paidOn = todayIso();
+async function confirmProofPayment(paymentId){
+  const r = await api('POST', `/payments/${paymentId}/confirm-proof`, {});
+  upsertById(payments, r.payment);
   paintPagos();
   openReceiptModal(paymentId, true);
 }
-
+function openGenerateMonthlyModal(){
+  const cm = me.serverToday.slice(0,7);
+  showModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 class="serif">Generar cuotas del mes</h3>
+    <p class="hint" style="margin-top:0">Crea una cuota pendiente para cada alumno activo que todavía no la tenga en ese mes, con el valor por defecto (o el de su beca). Los que ya tienen su cuota no se duplican.</p>
+    <div class="field"><label>Mes</label><input type="month" id="gm-month" value="${cm}"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-dark" onclick="confirmGenerateMonthly()">Generar</button>
+    </div>
+  `);
+}
+async function confirmGenerateMonthly(){
+  const month = document.getElementById('gm-month').value;
+  if(!month){ toast('Elegí el mes.'); return; }
+  const r = await api('POST', '/payments/generate-monthly', {month});
+  r.payments.forEach(pay=>upsertById(payments, pay));
+  closeModal(); paintPagos();
+  toast(r.created ? `Se generaron ${r.created} cuota${r.created===1?'':'s'} pendiente${r.created===1?'':'s'}.` : 'Todos los alumnos activos ya tenían su cuota de ese mes.');
+}
 function feeOptionsHTML(selectedTipo){
   const opts = [
     ['cuota','Cuota mensual'],
@@ -1683,7 +1626,8 @@ function feeOptionsHTML(selectedTipo){
   return opts.map(([v,l])=>`<option value="${v}" ${v===selectedTipo?'selected':''}>${l}</option>`).join('');
 }
 function suggestedAmount(tipo, student){
-  const base = student.scholarship && student.scholarship.active ? student.scholarship.amount : (student.group==='infantil' ? feeConfig.cuotaInfantil : feeConfig.cuotaAdulto);
+  const sch = student.scholarship;
+  const base = sch && sch.active ? sch.amount : (student.group==='infantil' ? feeConfig.cuotaInfantil : feeConfig.cuotaAdulto);
   if(tipo==='cuota' || tipo==='adelanto') return base;
   if(tipo==='examen') return feeConfig.examBoard;
   if(tipo==='examen_cinturon') return feeConfig.examBoard + feeConfig.belt;
@@ -1691,12 +1635,6 @@ function suggestedAmount(tipo, student){
   if(tipo==='otros') return '';
   return base;
 }
-function conceptLabel(tipo, student, customConcept){
-  const becaTag = (tipo==='cuota'||tipo==='adelanto') && student.scholarship && student.scholarship.active ? ' (becada)' : '';
-  if(tipo==='otros') return (customConcept||'').trim() || 'Otros';
-  return {cuota:'Cuota mensual'+becaTag, adelanto:'Cuota adelantada'+becaTag, examen:'Mesa de examen', examen_cinturon:'Mesa de examen + cinturón', cinturon:'Cinturón (graduación)'}[tipo];
-}
-
 function disambiguatedLabel(s, pool){
   const byName = pool.filter(x=>x.name===s.name);
   if(byName.length<=1) return s.name;
@@ -1706,6 +1644,7 @@ function disambiguatedLabel(s, pool){
 }
 function openNewPaymentModal(){
   const activos = students.filter(s=>s.status==='activo');
+  const cm = me.serverToday.slice(0,7);
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">Registrar pago</h3>
@@ -1714,10 +1653,13 @@ function openNewPaymentModal(){
       <datalist id="np-student-options">${activos.map(s=>`<option value="${esc(disambiguatedLabel(s,activos))}">`).join('')}</datalist>
     </div>
     <div class="field"><label>Concepto</label>
-      <select id="np-tipo" onchange="onNewPaymentChange()">${feeOptionsHTML('cuota')}</select>
+      <select id="np-tipo" onchange="onNewPaymentTipoChange()">${feeOptionsHTML('cuota')}</select>
     </div>
     <div class="field" id="np-custom-wrap" style="display:none"><label>Especificar concepto</label><input type="text" id="np-concept-custom" placeholder="Ej: Cena de fin de año"></div>
-    <div class="field"><label>Período / referencia</label><input type="text" id="np-period" value="Octubre 2026"></div>
+    <div class="grid2">
+      <div class="field"><label>Mes al que corresponde</label><input type="month" id="np-month" value="${cm}" onchange="onNewPaymentMonthChange()"></div>
+      <div class="field"><label>Período / referencia (texto del recibo)</label><input type="text" id="np-period" value="${esc(monthLabel(cm))}"></div>
+    </div>
     <div class="field"><label>Monto</label><input type="text" id="np-amount"></div>
     <div class="field">
       <label>Medio</label>
@@ -1727,6 +1669,7 @@ function openNewPaymentModal(){
       </div>
     </div>
     <div class="field"><label>Detalle</label><select id="np-method"></select></div>
+    <p class="hint">Si el alumno ya tiene esa cuota pendiente en el mes elegido, se cobra esa misma (no se duplica).</p>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-dark" onclick="confirmNewPayment()">Confirmar y generar recibo</button>
@@ -1734,6 +1677,26 @@ function openNewPaymentModal(){
   `);
   syncMethodOptions('np-method');
   onNewPaymentChange();
+}
+function nextMonthKey(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return m===12 ? `${y+1}-01` : `${y}-${String(m+1).padStart(2,'0')}`;
+}
+function onNewPaymentTipoChange(){
+  const tipo = document.getElementById('np-tipo').value;
+  const cm = me.serverToday.slice(0,7);
+  document.getElementById('np-month').value = tipo==='adelanto' ? nextMonthKey(cm) : cm;
+  const nextExam = events.filter(e=>e.type==='examen' && e.date>=me.serverToday).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const per = document.getElementById('np-period');
+  if(tipo==='examen' || tipo==='examen_cinturon') per.value = nextExam ? 'Mesa de examen — ' + fmtDateEs(nextExam.date) : 'Mesa de examen';
+  else if(tipo==='cinturon') per.value = 'Entrega de cinturón';
+  else if(tipo==='otros') per.value = '';
+  else per.value = monthLabel(document.getElementById('np-month').value);
+  onNewPaymentChange();
+}
+function onNewPaymentMonthChange(){
+  const tipo = document.getElementById('np-tipo').value;
+  if(tipo==='cuota' || tipo==='adelanto') document.getElementById('np-period').value = monthLabel(document.getElementById('np-month').value);
 }
 function newPaymentStudent(){
   const typed = document.getElementById('np-student-input').value;
@@ -1746,39 +1709,33 @@ function onNewPaymentChange(){
   document.getElementById('np-custom-wrap').style.display = tipo==='otros' ? 'block' : 'none';
   if(!student) return;
   document.getElementById('np-amount').value = suggestedAmount(tipo, student);
-  if(tipo==='adelanto') document.getElementById('np-period').value = 'Adelanto — próximo período';
-  else if(tipo==='examen' || tipo==='examen_cinturon') document.getElementById('np-period').value = 'Mesa de examen — 27 sep 2026';
-  else if(tipo==='cinturon') document.getElementById('np-period').value = 'Entrega de cinturón';
-  else if(tipo==='otros') document.getElementById('np-period').value = '';
-  else document.getElementById('np-period').value = 'Octubre 2026';
 }
-function confirmNewPayment(){
+async function confirmNewPayment(){
   const student = newPaymentStudent();
   if(!student){ toast('Elegí un alumno de la lista.'); return; }
   const tipo = document.getElementById('np-tipo').value;
   const customConcept = document.getElementById('np-concept-custom').value;
   if(tipo==='otros' && !customConcept.trim()){ toast('Escribí el concepto.'); return; }
-  const amount = parseFloat(document.getElementById('np-amount').value);
+  const amount = parseFloat(String(document.getElementById('np-amount').value).replace(',','.'));
   if(!amount || amount<=0 || isNaN(amount)){ toast('El monto tiene que ser un número mayor a cero.'); return; }
-  const medium = document.querySelector('input[name="np-medium"]:checked').value;
-  const method = document.getElementById('np-method').value;
-  const id = 'p'+(nextPaymentId++);
-  payments.push({
-    id, studentId: student.id, period: document.getElementById('np-period').value,
-    concept: conceptLabel(tipo, student, customConcept), amount,
-    status:'pagada', paidOn: todayIso(), medium, method,
+  const r = await api('POST', '/payments', {
+    studentId: student.id, tipo, customConcept, amount,
+    period: document.getElementById('np-period').value.trim(),
+    periodMonth: document.getElementById('np-month').value || undefined,
+    medium: document.querySelector('input[name="np-medium"]:checked').value,
+    method: document.getElementById('np-method').value,
   });
+  upsertById(payments, r.payment);
   paintPagos();
-  openReceiptModal(id, true);
+  openReceiptModal(r.payment.id, true);
 }
-
 function openPaymentModal(paymentId){
   const p = payments.find(x=>x.id===paymentId);
   const s = students.find(x=>x.id===p.studentId);
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">Registrar pago</h3>
-    <p style="color:var(--ink-soft);font-size:13.5px;margin:0 0 14px;">${s.name} · ${esc(p.concept)} · ${esc(p.period)}</p>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin:0 0 14px;">${esc(s.name)} · ${esc(p.concept)} · ${esc(p.period)}</p>
     <div class="field"><label>Monto</label><input type="text" id="pay-amount" value="${p.amount}"></div>
     <div class="field">
       <label>Medio</label>
@@ -1801,61 +1758,59 @@ function syncMethodOptions(selectId){
   const options = medium==='Físico' ? ['Efectivo'] : ['Transferencia','Mercado Pago','Otro medio electrónico'];
   sel.innerHTML = options.map(o=>`<option>${o}</option>`).join('');
 }
-function confirmPayment(paymentId){
-  const p = payments.find(x=>x.id===paymentId);
-  const medium = document.querySelector('input[name="medium"]:checked').value;
-  const method = document.getElementById('pay-method').value;
-  p.status = 'pagada';
-  p.paidOn = todayIso();
-  p.amount = parseFloat(document.getElementById('pay-amount').value)||p.amount;
-  p.medium = medium;
-  p.method = method;
+async function confirmPayment(paymentId){
+  const amount = parseFloat(String(document.getElementById('pay-amount').value).replace(',','.'));
+  if(!amount || amount<=0 || isNaN(amount)){ toast('El monto tiene que ser un número mayor a cero.'); return; }
+  const r = await api('POST', `/payments/${paymentId}/pay`, {
+    amount,
+    medium: document.querySelector('input[name="medium"]:checked').value,
+    method: document.getElementById('pay-method').value,
+  });
+  upsertById(payments, r.payment);
   paintPagos();
   openReceiptModal(paymentId, true);
 }
 function receiptText(p, s){
-  const receiptNo = 'R-' + p.id.toUpperCase().replace('P','') + '-2026';
-  return `Shuri-te Kan — Recibo no fiscal ${receiptNo}\nAlumno: ${s.name}\nConcepto: ${p.concept}\nPeríodo: ${esc(p.period)}\nMonto: ${fmtMoney(p.amount)}\nMedio: ${p.medium} (${p.method})\nFecha de pago: ${p.paidOn}\n¡Gracias!`;
+  return `${letterheadConfig.dojoName} — Recibo no fiscal ${p.receiptNo}\nAlumno: ${s.name}\nConcepto: ${p.concept}\nPeríodo: ${p.period}\nMonto: ${fmtMoney(p.amount)}\nMedio: ${p.medium} (${p.method})\nFecha de pago: ${p.paidOn}\n¡Gracias!`;
 }
 function openReceiptModal(paymentId, justPaid){
   const p = payments.find(x=>x.id===paymentId);
   const s = students.find(x=>x.id===p.studentId);
-  const receiptNo = 'R-' + p.id.toUpperCase().replace('P','') + '-2026';
   const waText = encodeURIComponent(receiptText(p,s));
+  const waPhone = String(s.phone||'').replace(/\D/g,'');
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">${justPaid ? 'Pago registrado' : 'Recibo'}</h3>
     <p style="color:var(--ink-soft);font-size:13.5px;margin:0;">Comprobante no fiscal, listo para compartir.</p>
     <div class="receipt">
-      <div class="rline"><span>Recibo</span><strong>${receiptNo}</strong></div>
-      <div class="rline"><span>Alumno</span><strong>${s.name}</strong></div>
+      <div class="rline"><span>Recibo</span><strong>${esc(p.receiptNo)}</strong></div>
+      <div class="rline"><span>Alumno</span><strong>${esc(s.name)}</strong></div>
       <div class="rline"><span>Concepto</span><strong>${esc(p.concept)}</strong></div>
       <div class="rline"><span>Período</span><strong>${esc(p.period)}</strong></div>
       <div class="rline"><span>Monto</span><strong>${fmtMoney(p.amount)}</strong></div>
-      <div class="rline"><span>Medio</span><strong>${p.medium} · ${p.method}</strong></div>
-      <div class="rline"><span>Fecha</span><strong>${p.paidOn}</strong></div>
+      <div class="rline"><span>Medio</span><strong>${esc(p.medium)} · ${esc(p.method)}</strong></div>
+      <div class="rline"><span>Fecha</span><strong>${esc(p.paidOn)}</strong></div>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="copyReceiptText('${p.id}')">Copiar texto</button>
       <button class="btn" onclick="printReceipt('${p.id}')">Descargar PDF</button>
-      <a class="btn btn-dark" style="text-decoration:none;text-align:center" target="_blank" href="https://wa.me/${s.phone}?text=${waText}">Enviar por WhatsApp</a>
+      <a class="btn btn-dark" style="text-decoration:none;text-align:center" target="_blank" rel="noopener" href="https://wa.me/${waPhone}?text=${waText}">Enviar por WhatsApp</a>
     </div>
   `);
 }
 function printReceipt(paymentId){
   const p = payments.find(x=>x.id===paymentId);
   const s = students.find(x=>x.id===p.studentId);
-  const receiptNo = 'R-' + p.id.toUpperCase().replace('P','') + '-2026';
   const rows = [
-    ['Recibo', receiptNo],
-    ['Alumno', s.name],
-    ['Concepto', p.concept],
-    ['Período', p.period],
+    ['Recibo', p.receiptNo],
+    ['Alumno', esc(s.name)],
+    ['Concepto', esc(p.concept)],
+    ['Período', esc(p.period)],
     ['Monto', fmtMoney(p.amount)],
-    ['Medio', p.medium + ' · ' + p.method],
+    ['Medio', esc(p.medium) + ' · ' + esc(p.method)],
     ['Fecha', fmtDateEs(p.paidOn)],
   ];
-  exportAsPdf({title:'Recibo de pago', periodLabel:p.period, headers:['Campo','Detalle'], rows, filenameBase:'recibo_'+receiptNo});
+  exportAsPdf({title:'Recibo de pago', periodLabel:esc(p.period), headers:['Campo','Detalle'], rows, filenameBase:'recibo_'+p.receiptNo});
 }
 function copyReceiptText(paymentId){
   const p = payments.find(x=>x.id===paymentId);
@@ -1872,21 +1827,46 @@ function copyReceiptText(paymentId){
 let asistenciaFilter = {group:'', dojo:''};
 let asistenciaView = 'hoy';
 let asistenciaMonth = null;
-function renderAsistenciaPanel(){
+let attendanceToday = new Set();   // presentes de hoy (ids de alumnos)
+let attendanceDate = null;         // fecha de "hoy" según el servidor
+let attendanceMonths = [];         // meses con clases registradas
+let attendanceMonthData = null;    // {month, dates:[...], records:{studentId:[fechas]}}
+async function refreshAttendanceToday(){
+  const t = await api('GET', '/attendance/today');
+  attendanceToday = new Set(t.present); attendanceDate = t.date;
+}
+async function refreshAttendanceData(){
+  const [, m] = await Promise.all([refreshAttendanceToday(), api('GET', '/attendance/months')]);
+  attendanceMonths = m.months;
+  if(!asistenciaMonth || !attendanceMonths.includes(asistenciaMonth)) asistenciaMonth = attendanceMonths[attendanceMonths.length-1];
+  attendanceMonthData = await api('GET', '/attendance?month=' + asistenciaMonth);
+}
+async function changeAsistenciaMonth(month){
+  asistenciaMonth = month;
+  attendanceMonthData = await api('GET', '/attendance?month=' + month);
+  paintPlanilla();
+}
+async function renderAsistenciaPanel(){
+  const panel = document.getElementById('panel-asistencia');
+  if(!panel) return;
+  if(!attendanceMonthData) panel.innerHTML = '<div class="loading-note">Cargando asistencia…</div>';
+  await refreshAttendanceData();
+  paintAsistenciaPanel();
+}
+function paintAsistenciaPanel(){
   const today = new Date().toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long'});
-  if(currentRole==='instructor'){ asistenciaFilter.dojo = activeStudent().dojo; }
-  if(!asistenciaMonth) asistenciaMonth = monthsWithClasses().slice(-1)[0] || currentMonthKey();
+  if(currentRole!=='admin'){ asistenciaFilter.dojo = activeStudent().dojo; }
   const canWrite = canWriteModule('asistencia');
   document.getElementById('panel-asistencia').innerHTML = `
     <div class="main-head"><div><h1>Asistencia</h1><p>${asistenciaView==='hoy' ? (today[0].toUpperCase()+today.slice(1)+(canWrite?' · tocá cada tarjeta para marcar presente.':' · modo lectura, no podés tomar asistencia.')) : (canWrite?'Planilla del mes · tocá una celda para corregir una presente o una ausente.':'Planilla del mes · modo lectura.')}</p></div>
       <div style="display:flex;gap:10px;">
         ${canWrite ? `<button class="btn" onclick="openAttendanceQr()">Código QR</button>` : ''}
-        ${asistenciaView==='hoy' && canWrite ? `<button class="btn btn-dark" onclick="toast('Asistencia de hoy guardada: ' + todaysAttendance.size + ' presentes.')">Guardar clase</button>` : ''}
+        ${asistenciaView==='hoy' && canWrite ? `<button class="btn btn-dark" onclick="toast('Asistencia de hoy guardada: ' + attendanceToday.size + ' presentes.')">Guardar clase</button>` : ''}
       </div>
     </div>
     <div class="sub-tabs">
-      <div class="sub-tab ${asistenciaView==='hoy'?'active':''}" onclick="asistenciaView='hoy';renderAsistenciaPanel();">Clase de hoy</div>
-      <div class="sub-tab ${asistenciaView==='planilla'?'active':''}" onclick="asistenciaView='planilla';renderAsistenciaPanel();">Planilla mensual</div>
+      <div class="sub-tab ${asistenciaView==='hoy'?'active':''}" onclick="asistenciaView='hoy';paintAsistenciaPanel();">Clase de hoy</div>
+      <div class="sub-tab ${asistenciaView==='planilla'?'active':''}" onclick="asistenciaView='planilla';paintAsistenciaPanel();">Planilla mensual</div>
     </div>
     <div class="toolbar">
       <div class="filters">
@@ -1895,13 +1875,13 @@ function renderAsistenciaPanel(){
           <option value="adulto" ${asistenciaFilter.group==='adulto'?'selected':''}>Adulto</option>
           <option value="infantil" ${asistenciaFilter.group==='infantil'?'selected':''}>Infantil</option>
         </select>
-        ${currentRole==='instructor' ? '' : `
+        ${currentRole!=='admin' ? '' : `
         <select onchange="asistenciaFilter.dojo=this.value;${asistenciaView==='hoy'?'paintAttendance()':'paintPlanilla()'};">
           <option value="">Todos los dojos</option>
-          ${dojos.map(d=>`<option value="${d.id}" ${asistenciaFilter.dojo===d.id?'selected':''}>${d.name}</option>`).join('')}
+          ${dojos.map(d=>`<option value="${d.id}" ${asistenciaFilter.dojo===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}
         </select>`}
         ${asistenciaView==='planilla' ? `
-        <select onchange="asistenciaMonth=this.value;paintPlanilla();">
+        <select onchange="changeAsistenciaMonth(this.value)">
           ${monthsWithClasses().map(m=>`<option value="${m}" ${asistenciaMonth===m?'selected':''}>${monthLabel(m)}</option>`).join('')}
         </select>` : ''}
       </div>
@@ -1914,12 +1894,7 @@ function renderAsistenciaPanel(){
   if(asistenciaView==='hoy') paintAttendance(); else paintPlanilla();
 }
 function currentMonthKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
-function monthsWithClasses(){
-  const set = new Set();
-  Object.values(attendanceHistory).forEach(dates=>dates.forEach(d=>set.add(d.slice(0,7))));
-  set.add(currentMonthKey());
-  return Array.from(set).sort();
-}
+function monthsWithClasses(){ return attendanceMonths.length ? attendanceMonths : [currentMonthKey()]; }
 function monthLabel(m){
   const [y,mo] = m.split('-');
   const d = new Date(Number(y), Number(mo)-1, 1);
@@ -1927,12 +1902,11 @@ function monthLabel(m){
   return s[0].toUpperCase()+s.slice(1);
 }
 function classDatesInMonth(month){
-  const set = new Set();
-  Object.values(attendanceHistory).forEach(dates=>dates.forEach(d=>{ if(d.startsWith(month)) set.add(d); }));
-  return Array.from(set).sort();
+  return attendanceMonthData && attendanceMonthData.month===month ? attendanceMonthData.dates : [];
 }
 function paintPlanilla(){
   const wrap = document.getElementById('sheet-table');
+  if(!wrap) return;
   const canWrite = canWriteModule('asistencia');
   const list = students.filter(s=>
     s.status==='activo' &&
@@ -1940,6 +1914,7 @@ function paintPlanilla(){
     (!asistenciaFilter.dojo || s.dojo===asistenciaFilter.dojo)
   );
   const dates = classDatesInMonth(asistenciaMonth);
+  const records = (attendanceMonthData && attendanceMonthData.records) || {};
   if(list.length===0){ wrap.innerHTML = ''; wrap.parentElement.innerHTML = '<div class="att-empty">No hay alumnos activos para este filtro.</div>'; return; }
   if(dates.length===0){ wrap.innerHTML = ''; wrap.parentElement.innerHTML = '<div class="att-empty">No hay clases registradas en ese mes todavía.</div>'; return; }
   const fmt = d=>{ const [,mo,da]=d.split('-'); return da+'/'+mo; };
@@ -1947,33 +1922,32 @@ function paintPlanilla(){
     <thead><tr><th class="name-col">Alumno</th>${dates.map(d=>`<th>${fmt(d)}</th>`).join('')}</tr></thead>
     <tbody>
       ${list.map(s=>{
-        const present = new Set(attendanceHistory[s.id]||[]);
-        return `<tr><td class="name-col">${s.name}</td>${dates.map(d=>{
+        const present = new Set(records[s.id]||[]);
+        return `<tr><td class="name-col">${esc(s.name)}</td>${dates.map(d=>{
           const isPresent = present.has(d);
-          return `<td class="sheet-cell ${isPresent?'present':'absent'}" ${canWrite?`onclick="toggleSheetCell(${s.id},'${d}')" title="${s.name} · ${fmt(d)} · tocá para cambiar"`:`style="cursor:default;" title="${s.name} · ${fmt(d)}"`}>${isPresent?'✓':'—'}</td>`;
+          return `<td class="sheet-cell ${isPresent?'present':'absent'}" ${canWrite?`onclick="toggleSheetCell('${s.id}','${d}')" title="${esc(s.name)} · ${fmt(d)} · tocá para cambiar"`:`style="cursor:default;" title="${esc(s.name)} · ${fmt(d)}"`}>${isPresent?'✓':'—'}</td>`;
         }).join('')}</tr>`;
       }).join('')}
     </tbody>
   `;
 }
-function toggleSheetCell(studentId, date){
-  const arr = attendanceHistory[studentId] || (attendanceHistory[studentId]=[]);
-  const i = arr.indexOf(date);
-  if(i>-1){ arr.splice(i,1); } else { arr.push(date); }
+async function toggleSheetCell(studentId, date){
+  const records = attendanceMonthData.records;
+  const arr = records[studentId] || (records[studentId] = []);
+  const present = arr.indexOf(date) === -1;
+  await api('PUT', '/attendance', {studentId, date, present});
+  if(present) arr.push(date); else arr.splice(arr.indexOf(date), 1);
+  if(date===attendanceDate){ if(present) attendanceToday.add(studentId); else attendanceToday.delete(studentId); }
   paintPlanilla();
 }
-function classDatesInRange(start, end){
-  const set = new Set();
-  Object.values(attendanceHistory).forEach(dates=>dates.forEach(d=>{ if(d>=start && d<=end) set.add(d); }));
-  return Array.from(set).sort();
-}
+
 function openDownloadSheet(){
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">Descargar planilla de asistencia</h3>
     <div class="field"><label>Rango</label>
       <select id="dl-mode" onchange="document.getElementById('dl-range-fields').style.display=this.value==='rango'?'block':'none';">
-        <option value="mes">Mes seleccionado: ${monthLabel(asistenciaMonth)}</option>
+        <option value="mes">Mes seleccionado: ${esc(monthLabel(asistenciaMonth))}</option>
         <option value="rango">Rango de fechas personalizado</option>
       </select>
     </div>
@@ -1988,19 +1962,20 @@ function openDownloadSheet(){
     </div>
   `);
 }
-function downloadAttendanceSheet(){
+async function downloadAttendanceSheet(){
   const mode = document.getElementById('dl-mode').value;
-  let dates, label;
+  let data, label;
   if(mode==='rango'){
     const from = document.getElementById('dl-from').value;
     const to = document.getElementById('dl-to').value;
     if(!from || !to || from>to){ toast('Elegí un rango de fechas válido.'); return; }
-    dates = classDatesInRange(from, to);
+    data = await api('GET', `/attendance/range?from=${from}&to=${to}`);
     label = `${from}_a_${to}`;
   } else {
-    dates = classDatesInMonth(asistenciaMonth);
+    data = {dates: classDatesInMonth(asistenciaMonth), records: (attendanceMonthData && attendanceMonthData.records) || {}};
     label = asistenciaMonth;
   }
+  const dates = data.dates;
   const list = students.filter(s=>
     s.status==='activo' &&
     (!asistenciaFilter.group || s.group===asistenciaFilter.group) &&
@@ -2009,22 +1984,11 @@ function downloadAttendanceSheet(){
   if(dates.length===0 || list.length===0){ toast('No hay datos de asistencia para exportar con ese filtro.'); return; }
   const header = ['Alumno', ...dates, 'Total presentes'];
   const rows = list.map(s=>{
-    const present = new Set(attendanceHistory[s.id]||[]);
+    const present = new Set(data.records[s.id]||[]);
     const cells = dates.map(d=>present.has(d)?'1':'0');
-    const total = cells.filter(c=>c==='1').length;
-    return [s.name, ...cells, String(total)];
+    return [s.name, ...cells, String(cells.filter(c=>c==='1').length)];
   });
-  const csvLines = [header, ...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
-  const csv = '\uFEFF' + csvLines.join('\r\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `asistencia_${label}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadCsv(`asistencia_${label}.csv`, header, rows);
   closeModal();
   toast('Planilla descargada.');
 }
@@ -2040,29 +2004,49 @@ function paintAttendanceGrid(targetId, filter){
   );
   if(list.length===0){ grid.innerHTML = '<div class="att-empty">No hay alumnos activos para este filtro.</div>'; return; }
   grid.innerHTML = list.map(s=>{
-    const present = todaysAttendance.has(s.id);
+    const present = attendanceToday.has(s.id);
     const b = beltById(s.belt);
-    return `<div class="att-card ${present?'present':''}" ${canWrite?`onclick="toggleAttendance(${s.id})"`:'style="cursor:default;"'}>
-      <div class="name">${s.name}</div>
-      <div class="belt-line"><span class="belt-chip">${beltDotHtml(b)}${b.name}</span></div>
+    return `<div class="att-card ${present?'present':''}" ${canWrite?`onclick="toggleAttendance('${s.id}')"`:'style="cursor:default;"'}>
+      <div class="name">${esc(s.name)}</div>
+      <div class="belt-line"><span class="belt-chip">${beltDotHtml(b)}${esc(b.name)}</span></div>
       <div class="state">${present ? '✓ Presente' : (canWrite ? 'Tocar para marcar' : '— Ausente')}</div>
     </div>`;
   }).join('');
 }
 let quickAttFilter = {group:'', dojo:''};
-function toggleAttendance(id){
-  if(todaysAttendance.has(id)) todaysAttendance.delete(id); else todaysAttendance.add(id);
-  paintAttendanceGrid('att-grid', asistenciaFilter);
-  paintAttendanceGrid('att-grid-modal', quickAttFilter);
-  const counter = document.getElementById('quick-att-count');
-  if(counter) counter.textContent = todaysAttendance.size;
+async function toggleAttendance(id){
+  const wasPresent = attendanceToday.has(id);
+  const repaint = ()=>{
+    paintAttendanceGrid('att-grid', asistenciaFilter);
+    paintAttendanceGrid('att-grid-modal', quickAttFilter);
+    const counter = document.getElementById('quick-att-count');
+    if(counter) counter.textContent = attendanceToday.size;
+  };
+  // Se refleja al instante y se guarda en el servidor; si falla, se deshace.
+  if(wasPresent) attendanceToday.delete(id); else attendanceToday.add(id);
+  repaint();
+  try{
+    await api('PUT', '/attendance', {studentId:id, date:attendanceDate, present:!wasPresent});
+  }catch(e){
+    if(wasPresent) attendanceToday.add(id); else attendanceToday.delete(id);
+    repaint();
+    throw e;
+  }
+  if(attendanceMonthData && attendanceDate && attendanceMonthData.month===attendanceDate.slice(0,7)){
+    const arr = attendanceMonthData.records[id] || (attendanceMonthData.records[id] = []);
+    const i = arr.indexOf(attendanceDate);
+    if(!wasPresent && i===-1) arr.push(attendanceDate);
+    if(wasPresent && i>-1) arr.splice(i,1);
+    if(!wasPresent && !attendanceMonthData.dates.includes(attendanceDate)) attendanceMonthData.dates.push(attendanceDate);
+  }
 }
-function openQuickAttendance(){
-  quickAttFilter = {group:'', dojo: currentRole==='instructor' ? activeStudent().dojo : ''};
+async function openQuickAttendance(){
+  await refreshAttendanceToday();
+  quickAttFilter = {group:'', dojo: currentRole!=='admin' ? activeStudent().dojo : ''};
   const today = new Date().toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long'});
   showModal(`
     <h3>Tomar asistencia — clase de hoy</h3>
-    <p style="margin:-6px 0 14px;color:var(--ink-soft);font-size:13px">${today[0].toUpperCase()+today.slice(1)} · tocá cada tarjeta para marcar presente · <span id="quick-att-count">${todaysAttendance.size}</span> presentes</p>
+    <p style="margin:-6px 0 14px;color:var(--ink-soft);font-size:13px">${today[0].toUpperCase()+today.slice(1)} · tocá cada tarjeta para marcar presente · <span id="quick-att-count">${attendanceToday.size}</span> presentes</p>
     <div class="toolbar" style="margin-bottom:12px">
       <div class="filters">
         <select onchange="quickAttFilter.group=this.value;paintAttendanceGrid('att-grid-modal',quickAttFilter);">
@@ -2070,22 +2054,21 @@ function openQuickAttendance(){
           <option value="adulto">Adulto</option>
           <option value="infantil">Infantil</option>
         </select>
-        ${currentRole==='instructor' ? '' : `
+        ${currentRole!=='admin' ? '' : `
         <select onchange="quickAttFilter.dojo=this.value;paintAttendanceGrid('att-grid-modal',quickAttFilter);">
           <option value="">Todos los dojos</option>
-          ${dojos.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}
+          ${dojos.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('')}
         </select>`}
       </div>
     </div>
     <div class="attendance-grid" id="att-grid-modal" style="max-height:48vh;overflow:auto;"></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cerrar</button>
-      <button class="btn btn-dark" onclick="toast('Asistencia de hoy guardada: ' + todaysAttendance.size + ' presentes.');closeModal();">Guardar clase</button>
+      <button class="btn btn-dark" onclick="toast('Asistencia de hoy guardada: ' + attendanceToday.size + ' presentes.');closeModal();">Guardar clase</button>
     </div>
   `);
   paintAttendanceGrid('att-grid-modal', quickAttFilter);
 }
-
 /* ============================================================
    ADMIN · PROGRAMAS / CINTURONES / CRONOGRAMA / ALQUILER
 ============================================================ */
@@ -2117,9 +2100,10 @@ function openProgramEditor(beltId){
     </div>
   `);
 }
-function saveProgramEditor(beltId){
+async function saveProgramEditor(beltId){
   const lines = document.getElementById('prog-text').value.split('\n').map(l=>l.trim()).filter(Boolean);
-  programs[beltId] = lines;
+  const r = await api('PUT', '/programs/'+beltId, {items: lines});
+  programs[beltId] = r.items;
   closeModal();
   renderProgramasAdmin();
   toast('Programa actualizado.');
@@ -2155,7 +2139,7 @@ function renderCinturones(){
           <li class="belt-row">
             <span class="ord">${i+1}</span>
             ${beltDotHtml(b)}
-            <span class="name">${b.name}${kyu?` <span class="tag tag-off">${kyu}º Kyu</span>`:''}</span>
+            <span class="name">${esc(b.name)}${kyu?` <span class="tag tag-off">${kyu}º Kyu</span>`:''}</span>
             <span class="time">${b.minMonths===0 ? 'Ingreso' : 'mín. ' + b.minMonths + ' meses · ' + b.classesRequired + ' clases'}</span>
             ${canWrite ? `<button class="btn-ghost" onclick="openBeltForm('${b.id}')">Editar</button>
             <button class="btn-ghost" onclick="openDeleteBeltModal('${b.id}')">Eliminar</button>` : ''}
@@ -2204,22 +2188,18 @@ function openAddBeltForm(group){
     </div>
   `);
 }
-function saveNewBelt(group){
+async function saveNewBelt(group){
   const name = document.getElementById('nb-name').value.trim();
   if(!name){ toast('El cinturón necesita un nombre.'); return; }
-  const slugBase = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
-  const id = group+'-'+slugBase;
-  if(beltById(id)){ toast('Ya hay un cinturón con un nombre muy parecido en este grupo. Probá con otro nombre.'); return; }
-  const color = document.getElementById('nb-color').value;
-  const afterIdx = parseInt(document.getElementById('nb-after').value);
-  const months = Math.max(0, parseInt(document.getElementById('nb-months').value)||0);
-  const classesReq = Math.max(0, parseInt(document.getElementById('nb-classes').value)||0);
-  const isKyu = document.getElementById('nb-kyu').checked;
-  belts.forEach(b=>{ if(b.group===group && b.order > afterIdx) b.order++; });
-  const newBelt = {id, name, group, order: afterIdx+1, color, minMonths:months, classesRequired:classesReq};
-  if(isKyu) newBelt.kyu = true;
-  belts.push(newBelt);
-  programs[id] = [];
+  const r = await api('POST', '/belts', {
+    name, group,
+    color: document.getElementById('nb-color').value,
+    after: parseInt(document.getElementById('nb-after').value),
+    minMonths: Math.max(0, parseInt(document.getElementById('nb-months').value)||0),
+    classesRequired: Math.max(0, parseInt(document.getElementById('nb-classes').value)||0),
+    kyu: document.getElementById('nb-kyu').checked,
+  });
+  belts = r.belts; programs = Object.assign(programs, r.programs);
   closeModal();
   renderCinturones();
   toast(`Cinturón "${name}" agregado.`);
@@ -2231,7 +2211,7 @@ function openBeltForm(id){
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">Editar cinturón</h3>
     <p class="hint" style="margin-top:0">${groupLabel(b.group)}${kyu?' · '+kyu+'º Kyu':''}</p>
-    <div class="field"><label>Nombre</label><input type="text" id="bf-name" value="${b.name}"></div>
+    <div class="field"><label>Nombre</label><input type="text" id="bf-name" value="${esc(b.name)}"></div>
     <div class="field"><label>Tiempo mínimo en el cinturón anterior (meses)</label><input type="number" id="bf-months" value="${b.minMonths}" min="0"></div>
     <div class="field"><label>Clases mínimas desde el cinturón anterior</label><input type="number" id="bf-classes" value="${b.classesRequired}" min="0"></div>
     <div class="modal-actions">
@@ -2240,38 +2220,26 @@ function openBeltForm(id){
     </div>
   `);
 }
-function saveBeltForm(id){
-  const b = beltById(id);
+async function saveBeltForm(id){
   const name = document.getElementById('bf-name').value.trim();
   if(!name){ toast('El cinturón necesita un nombre.'); return; }
-  b.name = name;
-  b.minMonths = Math.max(0, parseInt(document.getElementById('bf-months').value)||0);
-  b.classesRequired = Math.max(0, parseInt(document.getElementById('bf-classes').value)||0);
+  const r = await api('PUT', '/belts/'+id, {
+    name,
+    minMonths: Math.max(0, parseInt(document.getElementById('bf-months').value)||0),
+    classesRequired: Math.max(0, parseInt(document.getElementById('bf-classes').value)||0),
+  });
+  belts = r.belts;
   closeModal();
   renderCinturones();
   toast('Cinturón actualizado.');
 }
 function openDeleteBeltModal(id){
   const b = beltById(id);
-  const inUse = students.filter(s=>s.belt===id);
-  if(inUse.length){
-    showModal(`
-      <button class="close-x" onclick="closeModal()">✕</button>
-      <h3 class="serif">No se puede eliminar</h3>
-      <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">
-        ${inUse.length===1 ? 'Hay 1 alumno' : 'Hay ' + inUse.length + ' alumnos'} con el cinturón <strong>${b.name}</strong> asignado (${inUse.map(s=>s.name).join(', ')}). Cambiá su cinturón desde su ficha antes de eliminarlo.
-      </p>
-      <div class="modal-actions">
-        <button class="btn btn-dark" onclick="closeModal()">Entendido</button>
-      </div>
-    `);
-    return;
-  }
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">Eliminar cinturón</h3>
     <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">
-      Vas a eliminar <strong>${b.name}</strong> (${groupLabel(b.group)}) del programa de graduación. Esta acción no se puede deshacer.
+      Vas a eliminar <strong>${esc(b.name)}</strong> (${groupLabel(b.group)}) del programa de graduación. Esta acción no se puede deshacer.
     </p>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -2279,10 +2247,23 @@ function openDeleteBeltModal(id){
     </div>
   `);
 }
-function deleteBeltConfirmed(id){
+async function deleteBeltConfirmed(id){
   const b = beltById(id);
-  belts = belts.filter(x=>x.id!==id);
-  delete programs[id];
+  try{
+    const r = await api('DELETE', '/belts/'+id);
+    belts = r.belts; programs = r.programs;
+  }catch(e){
+    if(!(e instanceof ApiError) || e.status!==409) throw e;
+    // En uso: se explica quiénes lo tienen asignado.
+    const names = e.data.inUseNames;
+    showModal(`
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h3 class="serif">No se puede eliminar</h3>
+      <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">${esc(e.message)}${names ? ` (${esc(names.join(', '))})` : ''}</p>
+      <div class="modal-actions"><button class="btn btn-dark" onclick="closeModal()">Entendido</button></div>
+    `);
+    return;
+  }
   closeModal();
   renderCinturones();
   toast(`${b.name} fue eliminado del programa.`);
@@ -2304,18 +2285,18 @@ function renderCronograma(){
   paintEvents();
 }
 function paintSchedule(){
-  document.getElementById('schedule-list').innerHTML = schedule.length ? `<div class="sched-list">${schedule.map((s,i)=>`
+  document.getElementById('schedule-list').innerHTML = schedule.length ? `<div class="sched-list">${schedule.map(s=>`
     <div class="sched-item">
-      <div class="day">${s.day}</div>
+      <div class="day">${esc(s.day)}</div>
       <div class="details">${esc(s.details)}</div>
-      <button class="btn-ghost" onclick="openScheduleForm(${i})">Editar</button>
-      <button class="btn-ghost" onclick="deleteScheduleItem(${i})">Eliminar</button>
+      <button class="btn-ghost" onclick="openScheduleForm('${s.id}')">Editar</button>
+      <button class="btn-ghost" onclick="deleteScheduleItem('${s.id}')">Eliminar</button>
     </div>
   `).join('')}</div>` : '<p style="color:var(--ink-soft);font-size:13.5px;">Todavía no hay clases cargadas.</p>';
 }
-function openScheduleForm(index){
-  const editing = index!==undefined;
-  const s = editing ? schedule[index] : {day:'Lun', details:''};
+function openScheduleForm(id){
+  const editing = !!id;
+  const s = editing ? schedule.find(x=>x.id===id) : {day:'Lun', details:''};
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">${editing?'Editar clase':'Agregar clase'}</h3>
@@ -2327,21 +2308,22 @@ function openScheduleForm(index){
     <div class="field"><label>Detalle</label><input id="sch-details" value="${esc(s.details)}" placeholder="Ej: Adultos · Dojo Central 19:15 – 20:45"></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-dark" onclick="saveScheduleItem(${editing?index:'null'})">Guardar</button>
+      <button class="btn btn-dark" onclick="saveScheduleItem(${editing?`'${id}'`:'null'})">Guardar</button>
     </div>
   `);
 }
-function saveScheduleItem(index){
+async function saveScheduleItem(id){
   const day = document.getElementById('sch-day').value;
   const details = document.getElementById('sch-details').value.trim();
   if(!details){ toast('Completá el detalle de la clase.'); return; }
-  if(index===null){ schedule.push({day, details}); } else { schedule[index] = {day, details}; }
+  const r = id ? await api('PUT', '/schedule/'+id, {day, details}) : await api('POST', '/schedule', {day, details});
+  schedule = r.schedule;
   closeModal();
   paintSchedule();
   toast('Horario actualizado.');
 }
-function deleteScheduleItem(index){
-  schedule.splice(index,1);
+async function deleteScheduleItem(id){
+  schedule = (await api('DELETE', '/schedule/'+id)).schedule;
   paintSchedule();
   toast('Clase eliminada del cronograma.');
 }
@@ -2377,19 +2359,19 @@ function openEventForm(){
     </div>
   `);
 }
-function saveEvent(){
+async function saveEvent(){
   const type = document.getElementById('ev-type').value;
   const title = document.getElementById('ev-title').value.trim();
   const date = document.getElementById('ev-date').value;
   const notes = document.getElementById('ev-notes').value.trim();
   if(!title || !date){ toast('Completá el título y la fecha.'); return; }
-  events.push({id:'e'+(nextEventId++), type, title, date, notes});
+  events = (await api('POST', '/events', {type, title, date, notes})).events;
   closeModal();
   renderCronograma();
   toast('Actividad agregada al cronograma.');
 }
-function deleteEvent(id){
-  events = events.filter(e=>e.id!==id);
+async function deleteEvent(id){
+  events = (await api('DELETE', '/events/'+id)).events;
   paintEvents();
 }
 let gastosFilter = {q:'', category:'', month:''};
@@ -2451,9 +2433,9 @@ function paintExpenses(){
     <tr>
       <td><span class="tag tag-off">${e.category}</span></td>
       <td>${esc(e.concept)}</td>
-      <td>${e.date}</td>
+      <td>${esc(e.date)}</td>
       <td>${fmtMoney(e.amount)}</td>
-      <td>${e.status==='pagado' ? `<span class="tag tag-ok">Pagado · ${e.paidOn}</span>` : '<span class="tag tag-warn">Pendiente</span>'}</td>
+      <td>${e.status==='pagado' ? `<span class="tag tag-ok">Pagado · ${esc(e.paidOn)}</span>` : '<span class="tag tag-warn">Pendiente</span>'}</td>
       <td>${e.status==='pendiente' ? `<button class="btn btn-sm btn-dark" onclick="openExpensePaymentModal('${e.id}')">Registrar pago</button>` : ''}</td>
     </tr>
   `).join('') : `<tr><td colspan="6" class="att-empty">No se encontraron resultados.</td></tr>`;
@@ -2490,17 +2472,16 @@ function openNewExpenseModal(){
     </div>
   `);
 }
-function saveNewExpense(){
+async function saveNewExpense(){
   const concept = document.getElementById('ex-concept').value.trim();
-  const amount = parseFloat(document.getElementById('ex-amount').value);
+  const amount = parseFloat(String(document.getElementById('ex-amount').value).replace(',','.'));
   if(!concept){ toast('Completá el concepto.'); return; }
   if(!amount || amount<=0 || isNaN(amount)){ toast('El monto tiene que ser un número mayor a cero.'); return; }
-  const status = document.getElementById('ex-status').value;
-  const date = document.getElementById('ex-date').value;
-  expenses.push({
-    id:'g'+(nextExpenseId++), category: document.getElementById('ex-category').value,
-    concept, amount, date, status, ...(status==='pagado' ? {paidOn:date} : {}),
+  const r = await api('POST', '/expenses', {
+    category: document.getElementById('ex-category').value, concept, amount,
+    date: document.getElementById('ex-date').value, status: document.getElementById('ex-status').value,
   });
+  expenses.push(r.expense);
   closeModal(); paintExpenses();
   toast('Gasto registrado.');
 }
@@ -2518,17 +2499,14 @@ function openExpensePaymentModal(id){
     </div>
   `);
 }
-function confirmExpensePayment(id){
-  const e = expenses.find(x=>x.id===id);
-  const amount = parseFloat(document.getElementById('ex-pay-amount').value);
+async function confirmExpensePayment(id){
+  const amount = parseFloat(String(document.getElementById('ex-pay-amount').value).replace(',','.'));
   if(!amount || amount<=0 || isNaN(amount)){ toast('El monto tiene que ser un número mayor a cero.'); return; }
-  e.amount = amount;
-  e.paidOn = document.getElementById('ex-pay-date').value;
-  e.status = 'pagado';
+  const r = await api('POST', `/expenses/${id}/pay`, {amount, paidOn: document.getElementById('ex-pay-date').value});
+  upsertById(expenses, r.expense);
   closeModal(); paintExpenses();
   toast('Pago registrado.');
 }
-
 /* ============================================================
    ADMIN · CONFIGURACIÓN (logo + valores por defecto)
 ============================================================ */
@@ -2559,13 +2537,11 @@ let diplomaConfig = {
   titleSize: 16, nameSize: 32, gradeSize: 20, dateSize: 13, textSize: 13,
   showTenure: true, signatureImage: null, showQr: true,
 };
-let nextDiplomaNumber = 1;
-let issuedDiplomas = [];
 const kyuKanji = {1:'一級',2:'二級',3:'三級',4:'四級',5:'五級',6:'六級',7:'七級',8:'八級',9:'九級',10:'十級'};
 const danKanji = {1:'初段',2:'弐段',3:'参段',4:'四段',5:'五段',6:'六段',7:'七段',8:'八段',9:'九段',10:'十段'};
 let letterheadConfig = {
   dojoName: 'Shuri-te Kan', subtitle: 'Karate-Do Shorin-ryu (Kobayashi-ryu) y Kobudo',
-  address:'Av. San Martín 1234, Rosario, Santa Fe', phone:'341 555-0123', whatsapp:'341 555-0123', email:'info@shuritekan.com.ar', website:'www.shuritekan.com.ar', social:'Instagram: @shuritekan · Facebook: /shuritekan', extraText:'',
+  address:'', phone:'', whatsapp:'', email:'', website:'', social:'', extraText:'',
   instructorName:'', instructorGrade:'',
   logoSize:'md', logoPosition:'left',
   show:{subtitle:true, address:true, phone:true, whatsapp:true, email:true, website:true, social:true, extraText:true, instructorName:true, instructorGrade:true}
@@ -2579,16 +2555,18 @@ function colorFieldRow(key, label){
     </div>
   </div>`;
 }
-function saveThemeColors(){
-  Object.keys(themeColors).forEach(k=>{
-    themeColors[k] = document.getElementById('theme-'+k).value;
-  });
+async function saveThemeColors(){
+  const body = {};
+  Object.keys(themeColors).forEach(k=>{ body[k] = document.getElementById('theme-'+k).value; });
+  const r = await api('PUT', '/settings/theme', body);
+  Object.assign(themeColors, r.theme);
   applyTheme();
   renderConfiguracion();
   toast('Colores actualizados.');
 }
-function resetThemeColors(){
-  Object.assign(themeColors, themeDefaults);
+async function resetThemeColors(){
+  const r = await api('PUT', '/settings/theme', themeDefaults);
+  Object.assign(themeColors, r.theme);
   applyTheme();
   renderConfiguracion();
   toast('Se restablecieron los colores originales.');
@@ -2602,17 +2580,20 @@ function lhFieldRow(key, label){
     </div>
   </div>`;
 }
-function saveLetterhead(){
+async function saveLetterhead(){
   const keys = ['subtitle','address','phone','whatsapp','email','website','social','extraText','instructorName'];
+  const body = {show:{}};
   keys.forEach(k=>{
-    letterheadConfig[k] = document.getElementById('lh-'+k).value.trim();
-    letterheadConfig.show[k] = document.getElementById('lh-show-'+k).checked;
+    body[k] = document.getElementById('lh-'+k).value.trim();
+    body.show[k] = document.getElementById('lh-show-'+k).checked;
   });
-  letterheadConfig.instructorGrade = document.getElementById('lh-instructorGrade').value.trim();
-  letterheadConfig.show.instructorGrade = document.getElementById('lh-show-instructorGrade').checked;
-  letterheadConfig.dojoName = document.getElementById('lh-dojoName').value.trim() || letterheadConfig.dojoName;
-  letterheadConfig.logoSize = document.getElementById('lh-logoSize').value;
-  letterheadConfig.logoPosition = document.getElementById('lh-logoPosition').value;
+  body.instructorGrade = document.getElementById('lh-instructorGrade').value.trim();
+  body.show.instructorGrade = document.getElementById('lh-show-instructorGrade').checked;
+  body.dojoName = document.getElementById('lh-dojoName').value.trim();
+  body.logoSize = document.getElementById('lh-logoSize').value;
+  body.logoPosition = document.getElementById('lh-logoPosition').value;
+  const r = await api('PUT', '/settings/letterhead', body);
+  letterheadConfig = r.letterhead;
   toast('Membrete actualizado.');
 }
 function renderConfiguracion(){
@@ -2622,7 +2603,7 @@ function renderConfiguracion(){
     <div class="config-section">
       <h3 class="serif">Mi cuenta (Sensei)</h3>
       <p class="d">Tu usuario y contraseña de acceso administrativo.</p>
-      <div class="field"><label>Nombre de usuario</label><input type="text" id="cfg-admin-username" value="${esc(adminAccount.username)}"></div>
+      <div class="field"><label>Nombre de usuario</label><input type="text" id="cfg-admin-username" value="${esc(me.username)}" autocomplete="off"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn btn-dark" onclick="saveAdminUsername()">Guardar usuario</button>
         <button class="btn" onclick="openChangePasswordModal()">Cambiar contraseña</button>
@@ -2699,7 +2680,7 @@ function renderConfiguracion(){
       <h3 class="serif">Logo de la escuela</h3>
       <p class="d">Aparece en el ingreso y en el panel lateral.</p>
       <div class="logo-row">
-        <div class="logo-preview" id="logo-preview">${schoolLogo?`<img src="${schoolLogo}">`:'Sin logo'}</div>
+        <div class="logo-preview" id="logo-preview">${schoolLogo?`<img src="${esc(schoolLogo)}">`:'Sin logo'}</div>
         <div>
           <input type="file" accept="image/*" id="logo-input" onchange="onLogoSelected(this)">
           <div style="margin-top:8px"><button class="btn-ghost" onclick="removeLogo()">Quitar logo</button></div>
@@ -2738,7 +2719,7 @@ function renderConfiguracion(){
       <div class="field" style="margin-top:22px">
         <label>Foto de fondo de la portada</label>
         <div class="logo-row">
-          <div class="logo-preview" id="hero-photo-preview" style="width:120px;height:80px;"><img src="${homeContent.heroPhoto || defaultHeroPhoto}" style="width:100%;height:100%;object-fit:cover;"></div>
+          <div class="logo-preview" id="hero-photo-preview" style="width:120px;height:80px;"><img src="${esc(homeContent.heroPhoto || defaultHeroPhoto)}" style="width:100%;height:100%;object-fit:cover;"></div>
           <div>
             <input type="file" accept="image/*" id="hero-photo-input" onchange="onHeroPhotoSelected(this)">
             <div style="margin-top:8px"><button class="btn-ghost" onclick="resetHeroPhoto()">Volver a la foto original</button></div>
@@ -2757,78 +2738,73 @@ function renderConfiguracion(){
 
     <div class="config-section">
       <h3 class="serif">Respaldo de datos</h3>
-      <p class="d">Descargá una copia completa de todo lo cargado en el sistema (alumnos, pagos, gastos, configuración) o restaurala desde un archivo.</p>
+      <p class="d">Tus datos viven en la base del servidor. Descargá una copia completa (alumnos, pagos, asistencia, fotos, comprobantes y configuración) y guardala en un lugar seguro fuera del servidor. Además, el sistema guarda solo un respaldo por día en el propio servidor.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-        <button class="btn btn-dark" onclick="exportAllData()">Exportar todos los datos</button>
-        <input type="file" accept="application/json" id="import-data-input" onchange="importAllData(this)" style="max-width:260px;">
+        <button class="btn btn-dark" onclick="downloadBackup()">Descargar respaldo completo (.zip)</button>
+        <button class="btn" onclick="downloadDataExport()">Exportar datos legibles (.json)</button>
       </div>
-      <p class="hint" style="margin-top:10px;margin-bottom:0;">Importar reemplaza los datos actuales por los del archivo. Ideal para llevarte esta información el día que pases a un sistema con base de datos real.</p>
+      <p class="hint" style="margin-top:10px;">El respaldo incluye las contraseñas encriptadas y los datos personales de los alumnos: guardalo como guardarías una carpeta con sus fichas.</p>
+      <div class="field" style="margin-top:18px;">
+        <label>Restaurar desde un respaldo (.zip)</label>
+        <input type="file" accept=".zip,application/zip" id="restore-input" onchange="startRestore(this)" style="max-width:300px;">
+      </div>
+      <p class="hint" style="margin:0;">Restaurar reemplaza TODO lo actual por lo que hay en el respaldo y te pide tu contraseña. Lo anterior queda guardado en el servidor por si te arrepentís.</p>
     </div>
   `;
 }
-function exportAllData(){
-  const backup = {
-    version: 1, exportedAt: todayIso(),
-    students, nextStudentId, payments, nextPaymentId, expenses, nextExpenseId,
-    events, nextEventId, schedule, announcements, nextAnnouncementId,
-    forumPosts, nextForumId, pendingInscriptions, nextInscId,
-    feeConfig, letterheadConfig, homeContent, themeColors, adminAccount,
-    attendanceHistory, belts,
-  };
-  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'shuritekan_backup_' + todayIso() + '.json';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  toast('Respaldo descargado.');
+function downloadBackup(){
+  window.location.href = '/api/backup/download';
+  toast('Descargando el respaldo…');
 }
-function importAllData(input){
+function downloadDataExport(){
+  window.location.href = '/api/backup/export';
+  toast('Descargando los datos…');
+}
+let pendingRestoreFile = null;
+function startRestore(input){
+  const file = input.files[0];
+  input.value = '';
+  if(!file) return;
+  pendingRestoreFile = file;
+  showModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 class="serif">Restaurar respaldo</h3>
+    <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">
+      Vas a reemplazar <strong>todos</strong> los datos actuales por los de <strong>${esc(file.name)}</strong>. Todos van a tener que volver a ingresar.
+      Lo que hay ahora queda guardado en el servidor (carpeta de respaldos) por si necesitás volver atrás.
+    </p>
+    <div class="field"><label>Tu contraseña, para confirmar</label><input type="password" id="rs-password" autocomplete="current-password"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-dark" style="background:var(--shu-deep);border-color:var(--shu-deep)" onclick="confirmRestore()">Restaurar</button>
+    </div>
+  `);
+}
+async function confirmRestore(){
+  const password = document.getElementById('rs-password').value;
+  if(!password){ toast('Escribí tu contraseña para confirmar.'); return; }
+  await api('POST', '/backup/restore', pendingRestoreFile, {raw:true, contentType:'application/zip', headers:{'X-Confirm-Password': password}});
+  pendingRestoreFile = null;
+  resetAppState();
+  showModal(`
+    <h3 class="serif">Respaldo restaurado</h3>
+    <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">Los datos se reemplazaron correctamente. Ingresá de nuevo con las credenciales que tenían en ese respaldo.</p>
+    <div class="modal-actions"><button class="btn btn-dark" onclick="location.href='/#login';location.reload()">Ir al ingreso</button></div>
+  `, {locked:true});
+}
+
+async function onLogoSelected(input){
   const file = input.files[0];
   if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e=>{
-    try{
-      const data = JSON.parse(e.target.result);
-      if(!data.students || !Array.isArray(data.students)) throw new Error('bad file');
-      students = data.students; nextStudentId = data.nextStudentId || nextStudentId;
-      payments = data.payments || payments; nextPaymentId = data.nextPaymentId || nextPaymentId;
-      expenses = data.expenses || expenses; nextExpenseId = data.nextExpenseId || nextExpenseId;
-      events = data.events || events; nextEventId = data.nextEventId || nextEventId;
-      schedule = data.schedule || schedule;
-      announcements = data.announcements || announcements; nextAnnouncementId = data.nextAnnouncementId || nextAnnouncementId;
-      forumPosts = data.forumPosts || forumPosts; nextForumId = data.nextForumId || nextForumId;
-      pendingInscriptions = data.pendingInscriptions || pendingInscriptions; nextInscId = data.nextInscId || nextInscId;
-      if(data.feeConfig) Object.assign(feeConfig, data.feeConfig);
-      if(data.letterheadConfig) Object.assign(letterheadConfig, data.letterheadConfig);
-      if(data.homeContent) Object.assign(homeContent, data.homeContent);
-      if(data.themeColors){ Object.assign(themeColors, data.themeColors); applyTheme(); }
-      if(data.adminAccount) Object.assign(adminAccount, data.adminAccount);
-      attendanceHistory = data.attendanceHistory || attendanceHistory;
-      if(data.belts) belts = data.belts;
-      refreshLoginSelects();
-      renderConfiguracion();
-      toast('Datos restaurados desde el archivo.');
-    }catch(err){
-      toast('No se pudo leer el archivo. Verificá que sea un respaldo válido exportado desde acá.');
-    }
-    input.value = '';
-  };
-  reader.readAsText(file);
+  const up = await uploadFile(file, 'logo');
+  const r = await api('PUT', '/settings/logo', {fileId: up.id});
+  schoolLogo = r.url;
+  document.getElementById('logo-preview').innerHTML = `<img src="${esc(schoolLogo)}">`;
+  refreshBranding();
+  toast('Logo actualizado.');
 }
-function onLogoSelected(input){
-  const file = input.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e=>{
-    schoolLogo = e.target.result;
-    document.getElementById('logo-preview').innerHTML = `<img src="${schoolLogo}">`;
-    refreshBranding();
-    toast('Logo actualizado.');
-  };
-  reader.readAsDataURL(file);
-}
-function removeLogo(){
+async function removeLogo(){
+  await api('PUT', '/settings/logo', {fileId: null});
   schoolLogo = null;
   document.getElementById('logo-preview').innerHTML = 'Sin logo';
   refreshBranding();
@@ -2853,53 +2829,54 @@ function toEmbedUrl(url){
     return url;
   }catch(e){ return url; }
 }
-function onHeroPhotoSelected(input){
+async function onHeroPhotoSelected(input){
   const file = input.files[0];
   if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e=>{
-    homeContent.heroPhoto = e.target.result;
-    document.getElementById('hero-photo-preview').innerHTML = `<img src="${homeContent.heroPhoto}" style="width:100%;height:100%;object-fit:cover;">`;
-    toast('Foto de fondo actualizada.');
-  };
-  reader.readAsDataURL(file);
+  const up = await uploadFile(file, 'hero');
+  const r = await api('PUT', '/settings/hero', {fileId: up.id});
+  homeContent.heroPhoto = r.url;
+  document.getElementById('hero-photo-preview').innerHTML = `<img src="${esc(r.url)}" style="width:100%;height:100%;object-fit:cover;">`;
+  toast('Foto de fondo actualizada.');
 }
-function resetHeroPhoto(){
+async function resetHeroPhoto(){
+  await api('PUT', '/settings/hero', {fileId: null});
   homeContent.heroPhoto = null;
   document.getElementById('hero-photo-preview').innerHTML = `<img src="${defaultHeroPhoto}" style="width:100%;height:100%;object-fit:cover;">`;
   toast('Se restauró la foto original.');
 }
-function saveAdminUsername(){
+async function saveAdminUsername(){
   const val = document.getElementById('cfg-admin-username').value.trim();
   if(!val){ toast('El usuario no puede quedar vacío.'); return; }
-  if(students.some(s=>s.username===val)){ toast('Ese usuario ya lo usa un alumno.'); return; }
-  adminAccount.username = val;
-  refreshLoginSelects();
+  const r = await api('PUT', '/auth/username', {username: val});
+  me.username = r.username;
   toast('Usuario del Sensei actualizado.');
 }
-function saveFeeConfig(){
-  feeConfig.cuotaAdulto = parseFloat(document.getElementById('cfg-cuotaAdulto').value)||feeConfig.cuotaAdulto;
-  feeConfig.cuotaInfantil = parseFloat(document.getElementById('cfg-cuotaInfantil').value)||feeConfig.cuotaInfantil;
-  feeConfig.examBoard = parseFloat(document.getElementById('cfg-examBoard').value)||feeConfig.examBoard;
-  feeConfig.belt = parseFloat(document.getElementById('cfg-belt').value)||feeConfig.belt;
+async function saveFeeConfig(){
+  const num = id=>parseFloat(String(document.getElementById(id).value).replace(',','.'));
+  const r = await api('PUT', '/settings/fees', {
+    cuotaAdulto: num('cfg-cuotaAdulto'), cuotaInfantil: num('cfg-cuotaInfantil'), examBoard: num('cfg-examBoard'), belt: num('cfg-belt'),
+  });
+  feeConfig = r.fees;
   toast('Valores por defecto actualizados.');
 }
-function saveHomeContent(){
-  homeContent.heroTitle = document.getElementById('cfg-heroTitle').value.trim()||homeContent.heroTitle;
-  homeContent.heroLead = document.getElementById('cfg-heroLead').value.trim()||homeContent.heroLead;
-  homeContent.nosotrosDesc = document.getElementById('cfg-nosotrosDesc').value.trim()||homeContent.nosotrosDesc;
-  homeContent.filosofiaText = document.getElementById('cfg-filosofiaText').value.trim()||homeContent.filosofiaText;
-  homeContent.showFilosofia = document.getElementById('cfg-showFilosofia').checked;
-  homeContent.showActivities = document.getElementById('cfg-showActivities').checked;
-  homeContent.showVideo = document.getElementById('cfg-showVideo').checked;
-  homeContent.videoUrl = document.getElementById('cfg-videoUrl').value.trim();
+async function saveHomeContent(){
+  const r = await api('PUT', '/settings/home', {
+    heroTitle: document.getElementById('cfg-heroTitle').value.trim(),
+    heroLead: document.getElementById('cfg-heroLead').value.trim(),
+    nosotrosDesc: document.getElementById('cfg-nosotrosDesc').value.trim(),
+    filosofiaText: document.getElementById('cfg-filosofiaText').value.trim(),
+    showFilosofia: document.getElementById('cfg-showFilosofia').checked,
+    showActivities: document.getElementById('cfg-showActivities').checked,
+    showVideo: document.getElementById('cfg-showVideo').checked,
+    videoUrl: document.getElementById('cfg-videoUrl').value.trim(),
+  });
+  homeContent = r.config.home;
   toast('Página pública actualizada.');
 }
-
 /* ============================================================
    ADMIN · FICHA DE INSCRIPCIÓN
 ============================================================ */
-function inscripcionUrl(){ return location.origin + location.pathname + '#inscripcion'; }
+function inscripcionUrl(){ return location.origin + '/#inscripcion'; }
 function renderInscripcionAdmin(){
   const isAdmin = currentRole==='admin';
   document.getElementById('panel-inscripcion').innerHTML = `
@@ -2933,7 +2910,7 @@ function paintInscRequests(){
     <div class="req-row">
       <div>
         <div class="rname">${esc(r.name)}</div>
-        <div class="rmeta">${groupLabel(r.group)} · ${dojoName(r.dojo)} · ${esc(r.phone)}${r.dni?' · DNI: '+esc(r.dni):''}${r.guardian?' · Tutor: '+esc(r.guardian):''}</div>
+        <div class="rmeta">${groupLabel(r.group)} · ${esc(dojoName(r.dojo))} · ${esc(r.phone)}${r.dni?' · DNI: '+esc(r.dni):''}${r.guardian?' · Tutor: '+esc(r.guardian):''}</div>
       </div>
       <div>
         <button class="btn btn-sm btn-dark" onclick="approveInscripcion('${r.id}')">Dar de alta</button>
@@ -2943,18 +2920,14 @@ function paintInscRequests(){
   `).join('');
 }
 async function approveInscripcion(id){
-  const r = pendingInscriptions.find(x=>x.id===id);
-  const startBelt = r.group + '-blanco';
-  const username = generateUniqueUsername(r.name);
-  const tempPass = r.dni || randomTempPassword();
-  const passwordHash = await sha256Hex(tempPass);
-  students.push({id:nextStudentId++, name:r.name, belt:startBelt, since:todayIso(), birth:r.birth||'', familyGroup:'', phone:r.phone, dni:r.dni||'', guardian:r.guardian, allergies:r.notes||'', emergencyContact:r.guardian||'', emergencyPhone:r.emergencyPhone||'', photo:null, group:r.group, dojo:r.dojo, status:'activo', isInstructor:false, scholarship:{active:false, amount:0}, activities:[], username, passwordHash, enabledModules:['mi-programa','mis-cuotas','mi-asistencia','biblioteca','foro','inscripcion']});
+  const r = await api('POST', `/inscriptions/${id}/approve`, {});
   pendingInscriptions = pendingInscriptions.filter(x=>x.id!==id);
-  refreshLoginSelects();
+  upsertById(students, r.student);
   paintInscRequests();
-  toast(`${esc(r.name)} fue dado de alta. Usuario: ${username} · Contraseña inicial: ${tempPass}`);
+  showNewStudentCredentials(r.student, r);
 }
-function discardInscripcion(id){
+async function discardInscripcion(id){
+  await api('DELETE', '/inscriptions/'+id);
   pendingInscriptions = pendingInscriptions.filter(x=>x.id!==id);
   paintInscRequests();
 }
@@ -2966,21 +2939,23 @@ function buildInscForm(isPreview){
       <div class="field"><label>Nombre y apellido</label><input id="f-name" type="text" placeholder="Nombre completo"></div>
       <div class="field"><label>Fecha de nacimiento</label><input id="f-birth" type="date"></div>
       <div class="field"><label>Grupo</label><select id="f-group"><option value="infantil">Infantil</option><option value="adulto">Adulto</option></select></div>
-      <div class="field"><label>Dojo</label><select id="f-dojo">${dojos.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select></div>
+      <div class="field"><label>Dojo</label><select id="f-dojo">${dojos.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('')}</select></div>
       <div class="field"><label>Teléfono de contacto</label><input id="f-phone" type="tel" placeholder="Con código de área"></div>
       <div class="field"><label>DNI</label><input id="f-dni" type="text" placeholder="Se va a usar para tu contraseña inicial"></div>
       <div class="field"><label>Tutor / contacto de emergencia (si es menor)</label><input id="f-guardian" type="text" placeholder="Opcional"></div>
       <div class="field"><label>Teléfono de emergencia (si es distinto al de contacto)</label><input id="f-emergencyPhone" type="tel" placeholder="Opcional"></div>
       <div class="field"><label>Alergias, condiciones médicas u observaciones</label><textarea id="f-notes" placeholder="Opcional"></textarea></div>
+      <input class="hp-field" id="f-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
       <button class="btn-primary" onclick="submitInscripcion(${isPreview?'true':'false'})">Enviar ficha</button>
     </div>
   `;
 }
-function submitInscripcion(isPreview){
+async function submitInscripcion(isPreview){
   const name = cleanText(document.getElementById('f-name').value.trim());
   if(!name){ toast('Completá al menos el nombre para enviar la ficha.'); return; }
-  const entry = {
-    id: 'i'+(nextInscId++), name,
+  if(isPreview){ closeModal(); toast('Así se ve el formulario. Esta vista previa no envía nada.'); return; }
+  const r = await api('POST', '/inscriptions', {
+    name,
     birth: document.getElementById('f-birth').value,
     group: document.getElementById('f-group').value,
     dojo: document.getElementById('f-dojo').value,
@@ -2989,18 +2964,16 @@ function submitInscripcion(isPreview){
     guardian: cleanText(document.getElementById('f-guardian').value.trim()),
     emergencyPhone: cleanText(document.getElementById('f-emergencyPhone').value.trim()),
     notes: cleanText(document.getElementById('f-notes').value.trim()),
-  };
-  pendingInscriptions.push(entry);
-  if(isPreview){ closeModal(); toast('Ficha de ejemplo recibida — se vería en "Solicitudes recibidas".'); return; }
+    website: document.getElementById('f-website').value,
+  });
   document.getElementById('insc-card').innerHTML = `
     <div class="insc-done">
       <div class="mark">〇</div>
       <h2 class="serif" style="margin:14px 0 6px;">Ficha enviada</h2>
-      <p style="color:var(--ink-soft);font-size:14px;line-height:1.6;">Gracias, ${esc(name.split(' ')[0])}. El dojo se va a comunicar para coordinar tu primera clase.</p>
+      <p style="color:var(--ink-soft);font-size:14px;line-height:1.6;">Gracias, ${esc(r.firstName || name.split(' ')[0])}. El dojo se va a comunicar para coordinar tu primera clase.</p>
     </div>
   `;
 }
-
 /* ============================================================
    BIBLIOTECA (admin/instructor editan, alumno solo lee)
 ============================================================ */
@@ -3009,7 +2982,7 @@ let glossarySort = 'asc';
 let glossaryFilter = {q:''};
 let linksFilter = {q:''};
 let linksSort = 'asc';
-function canEditLibrary(){ return currentRole==='admin' || (currentRole==='instructor' && canWriteModule('biblioteca')); }
+function canEditLibrary(){ return currentRole==='admin' || canWriteModule('biblioteca'); }
 function renderBiblioteca(){
   document.getElementById('panel-biblioteca').innerHTML = `
     <div class="main-head"><div><h1>Biblioteca</h1><p>Glosario técnico y enlaces o videos de referencia del dojo.</p></div></div>
@@ -3090,14 +3063,19 @@ function openGlossaryModal(){
     <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-dark" onclick="saveGlossary()">Agregar</button></div>
   `);
 }
-function saveGlossary(){
+async function saveGlossary(){
   const term = document.getElementById('g-term').value.trim();
   const def = document.getElementById('g-def').value.trim();
   if(!term||!def){ toast('Completá término y definición.'); return; }
-  libraryGlossary.push({id:'g'+(nextGlossaryId++), term, def});
+  const r = await api('POST', '/library/glossary', {term, def});
+  libraryGlossary.push(r.item);
   closeModal(); paintBiblioteca();
 }
-function removeGlossary(id){ libraryGlossary = libraryGlossary.filter(g=>g.id!==id); paintBiblioteca(); }
+async function removeGlossary(id){
+  await api('DELETE', '/library/glossary/'+id);
+  libraryGlossary = libraryGlossary.filter(g=>g.id!==id);
+  paintBiblioteca();
+}
 function openLinkModal(id){
   const editing = !!id;
   const l = editing ? libraryLinks.find(x=>x.id===id) : {title:'', url:'', type:'link', desc:''};
@@ -3111,36 +3089,28 @@ function openLinkModal(id){
     <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-dark" onclick="saveLink(${editing?`'${id}'`:'null'})">${editing?'Guardar':'Agregar'}</button></div>
   `);
 }
-function saveLink(id){
+async function saveLink(id){
   const title = document.getElementById('l-title').value.trim();
   const url = document.getElementById('l-url').value.trim();
   const desc = document.getElementById('l-desc').value.trim();
   const type = document.getElementById('l-type').value;
   if(!title||!url){ toast('Completá el texto a mostrar y la URL.'); return; }
   if(!isValidUrl(url)){ toast('La URL no es válida. Tiene que empezar con http:// o https://'); return; }
-  if(id){
-    const l = libraryLinks.find(x=>x.id===id);
-    Object.assign(l, {title, url, desc, type});
-  } else {
-    libraryLinks.push({id:'l'+(nextLinkId++), title, url, desc, type});
-  }
+  const r = id ? await api('PUT', '/library/links/'+id, {title, url, desc, type}) : await api('POST', '/library/links', {title, url, desc, type});
+  upsertById(libraryLinks, r.item);
   closeModal(); paintBiblioteca();
   toast(id?'Enlace actualizado.':'Enlace agregado.');
 }
-function removeLink(id){ libraryLinks = libraryLinks.filter(l=>l.id!==id); paintBiblioteca(); }
-
+async function removeLink(id){
+  await api('DELETE', '/library/links/'+id);
+  libraryLinks = libraryLinks.filter(l=>l.id!==id);
+  paintBiblioteca();
+}
 /* ============================================================
    FORO
 ============================================================ */
-function currentDisplayName(){
-  if(currentRole==='admin') return 'Sensei';
-  return activeStudent().name;
-}
-function currentDisplayRole(){
-  if(currentRole==='admin') return 'Administrador';
-  if(currentRole==='instructor') return 'Instructor';
-  return 'Alumno';
-}
+
+
 let foroTab = 'anuncios';
 function renderForo(){
   document.getElementById('panel-foro').innerHTML = `
@@ -3193,35 +3163,44 @@ function paintAnnouncements(){
     </div>
   `).join('') || '<p style="color:var(--ink-soft);font-size:13.5px;">Todavía no hay anuncios.</p>';
 }
-function publishAnnouncement(){
+async function publishAnnouncement(){
   const title = document.getElementById('ann-title').value.trim();
   const body = document.getElementById('ann-body').value.trim();
   if(!title || !body){ toast('Completá el título y el texto del anuncio.'); return; }
-  announcements.push({id:'an'+(nextAnnouncementId++), title, body, date: todayIso()});
+  const r = await api('POST', '/forum/announcements', {title, body});
+  announcements.push(r.item);
   document.getElementById('ann-title').value = '';
   document.getElementById('ann-body').value = '';
   paintAnnouncements();
   toast('Anuncio publicado.');
 }
-function removeAnnouncement(id){ announcements = announcements.filter(a=>a.id!==id); paintAnnouncements(); }
+async function removeAnnouncement(id){
+  await api('DELETE', '/forum/announcements/'+id);
+  announcements = announcements.filter(a=>a.id!==id);
+  paintAnnouncements();
+}
 function paintForum(){
   document.getElementById('forum-list').innerHTML = forumPosts.slice().reverse().map(p=>`
     <div class="forum-post">
-      <div class="fh"><span class="fauthor">${esc(p.author)} <span class="frole">${esc(p.role)}</span></span><span class="fdate">${p.date}</span></div>
+      <div class="fh"><span class="fauthor">${esc(p.author)} <span class="frole">${esc(p.role)}</span></span><span class="fdate">${esc(p.date)}</span></div>
       <div class="ftext">${esc(p.text)}</div>
       ${(currentRole==='admin'||currentRole==='instructor') ? `<button class="btn-ghost" style="margin-top:8px" onclick="removeForumPost('${p.id}')">Eliminar</button>` : ''}
     </div>
   `).join('') || '<p style="color:var(--ink-soft);font-size:13.5px;">Todavía no hay publicaciones.</p>';
 }
-function publishForum(){
+async function publishForum(){
   const text = document.getElementById('forum-text').value.trim();
   if(!text){ toast('Escribí algo antes de publicar.'); return; }
-  forumPosts.push({id:'f'+(nextForumId++), author: currentDisplayName(), role: currentDisplayRole(), text, date: todayIso()});
+  const r = await api('POST', '/forum/posts', {text});
+  forumPosts.push(r.post);
   document.getElementById('forum-text').value = '';
   paintForum();
 }
-function removeForumPost(id){ forumPosts = forumPosts.filter(p=>p.id!==id); paintForum(); }
-
+async function removeForumPost(id){
+  await api('DELETE', '/forum/posts/'+id);
+  forumPosts = forumPosts.filter(p=>p.id!==id);
+  paintForum();
+}
 /* ============================================================
    ALUMNO · MI PROGRAMA (su cinturón + anteriores, no los posteriores)
 ============================================================ */
@@ -3233,29 +3212,29 @@ function renderMiPrograma(){
   const idx = beltIndexInGroup(s.belt, s.group);
   const visible = list.slice(0, idx+1);
   const nextBelt = list[idx+1];
-  const classesSince = (attendanceHistory[s.id]||[]).filter(d=>d>=s.since).length;
+  const classesSince = classesSinceBelt;
   const required = nextBelt ? nextBelt.classesRequired : null;
   const pct = nextBelt ? Math.min(100, Math.round((classesSince/required)*100)) : 100;
   const upcoming = events.slice().sort((a,b)=>a.date.localeCompare(b.date));
   const today = todayIso();
   document.getElementById('panel-mi-programa').innerHTML = `
     <div class="main-head"><div style="display:flex;align-items:center;gap:14px;">${avatarHtml(s,52)}<div><h1 style="margin:0">Mi programa</h1><p style="margin:2px 0 0">Tu cinturón actual y todo lo que ya recorriste antes.</p></div></div>
-      <button class="btn btn-dark" onclick="openDigitalCard(${s.id})">Ver mi carnet</button>
+      <button class="btn btn-dark" onclick="openDigitalCard('${s.id}')">Ver mi carnet</button>
     </div>
 
     <div class="info-card" style="margin-bottom:20px">
-      <strong>${nextBelt ? 'Progreso hacia ' + nextBelt.name : 'Nivel máximo del programa'}</strong>
+      <strong>${nextBelt ? 'Progreso hacia ' + esc(nextBelt.name) : 'Nivel máximo del programa'}</strong>
       ${nextBelt ? `
         <div class="progress-track" style="margin:10px 0 6px"><div class="progress-fill" style="width:${pct}%;background:${nextBelt.color}"></div></div>
-        <p style="margin:0">${classesSince} de ${required} clases desde tu cinturón ${list[idx].name} (${fmtDateEs(s.since)}).
+        <p style="margin:0">${classesSince} de ${required} clases desde tu cinturón ${esc(list[idx].name)} (${fmtDateEs(s.beltSince)}).
         ${classesSince>=required ? ' Ya cumplís el mínimo de clases — esperá la próxima convocatoria a mesa de examen.' : ' Te faltan ' + (required-classesSince) + ' clases más para poder rendir.'}</p>
       ` : `<p style="margin:0">Alcanzaste el nivel más alto del programa de cinturones. ¡Felicitaciones!</p>`}
     </div>
 
     ${visible.slice().reverse().map(b=>`
       <div class="program-block">
-        <div class="ph">${beltDotHtml(b)}<strong>${b.name}</strong>${b.id===s.belt?' <span class="tag tag-ok" style="margin-left:8px">Actual</span>':''}</div>
-        <ul>${(programs[b.id]||[]).map(t=>`<li>${t}</li>`).join('')}</ul>
+        <div class="ph">${beltDotHtml(b)}<strong>${esc(b.name)}</strong>${b.id===s.belt?' <span class="tag tag-ok" style="margin-left:8px">Actual</span>':''}</div>
+        <ul>${(programs[b.id]||[]).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
       </div>
     `).join('')}
 
@@ -3293,18 +3272,18 @@ function openDigitalCard(id){
     <button class="close-x" onclick="closeModal()">✕</button>
     <div id="digital-card" class="id-card">
       <div class="id-card-head">
-        ${schoolLogo?`<img src="${schoolLogo}" class="id-card-logo">`:''}
+        ${schoolLogo?`<img src="${esc(schoolLogo)}" class="id-card-logo">`:''}
         <div class="id-card-dojo">${esc(letterheadConfig.dojoName)}</div>
       </div>
       ${avatarHtml(s,84)}
       <div class="id-card-name">${esc(s.name)}</div>
       <div class="id-card-belt">${beltDotHtml(b)} ${esc(grad)}</div>
-      <div class="id-card-meta">${dojoName(s.dojo)} · Desde ${fmtDateEs(s.since)}</div>
+      <div class="id-card-meta">${esc(dojoName(s.dojo))} · Desde ${fmtDateEs(s.since)}</div>
       <div class="id-card-meta">${s.isInstructor?'Instructor · ':''}${groupLabel(s.group)}</div>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cerrar</button>
-      <button class="btn btn-dark" onclick="printDigitalCard(${id})">Imprimir / Guardar como PDF</button>
+      <button class="btn btn-dark" onclick="printDigitalCard('${id}')">Imprimir / Guardar como PDF</button>
     </div>
   `);
 }
@@ -3313,7 +3292,7 @@ function printDigitalCard(id){
   document.getElementById('print-area').innerHTML = document.getElementById('digital-card').outerHTML;
   setTimeout(()=>window.print(), 80);
 }
-function buildDiplomaHtml(s, a, overrides, diplomaNumber){
+function buildDiplomaHtml(s, a, overrides, diplomaNumber, verifyCode){
   overrides = overrides || {};
   const isExam = a.type==='examen' && a.belt;
   let titleLine, bodyLine, centerLine, extraLine = '';
@@ -3348,7 +3327,7 @@ function buildDiplomaHtml(s, a, overrides, diplomaNumber){
   const borderClasses = {okinawa:'diploma-okinawa', oriental:'diploma-oriental', minimalista:'diploma-minimal', imperial:'diploma-imperial', bambu:'diploma-bambu'};
   const borderClass = borderClasses[style] || 'diploma-border';
   const decorationsByStyle = {
-    okinawa: `${schoolLogo?`<img src="${schoolLogo}" class="diploma-watermark">`:''}<span class="diploma-corner-b"></span><span class="diploma-corner-c"></span>`,
+    okinawa: `${schoolLogo?`<img src="${esc(schoolLogo)}" class="diploma-watermark">`:''}<span class="diploma-corner-b"></span><span class="diploma-corner-c"></span>`,
     oriental: `<span class="diploma-diamond dd-tl"></span><span class="diploma-diamond dd-tr"></span><span class="diploma-diamond dd-bl"></span><span class="diploma-diamond dd-br"></span>`,
     minimalista: `<span class="diploma-corner-b"></span><span class="diploma-corner-c"></span>`,
     imperial: `<span class="diploma-bracket db-tl"></span><span class="diploma-bracket db-tr"></span><span class="diploma-bracket db-bl"></span><span class="diploma-bracket db-br"></span>`,
@@ -3356,19 +3335,19 @@ function buildDiplomaHtml(s, a, overrides, diplomaNumber){
   };
   const decorations = decorationsByStyle[style] || '';
   const numLine = diplomaNumber ? `<div class="diploma-number">Nº ${String(diplomaNumber).padStart(4,'0')}</div>` : '';
-  const qrLine = (diplomaConfig.showQr && diplomaNumber) ? `<div class="diploma-qr" data-verify="${diplomaNumber}"></div>` : '';
+  const qrLine = (diplomaConfig.showQr && diplomaNumber) ? `<div class="diploma-qr" data-verify="${esc(verifyCode || 'VISTA-PREVIA')}"></div>` : '';
   const years = diplomaConfig.showTenure ? yearsBetween(s.since, a.date) : 0;
   const tenureLine = years>=1 ? `<div class="diploma-text" style="position:relative;z-index:1;font-size:${sz.text}px;">en reconocimiento a ${years} año${years===1?'':'s'} de entrenamiento en el dojo</div>` : '';
   const hasCustomExaminer = !!(a.instructor && a.instructor.trim());
   const signerName = hasCustomExaminer ? a.instructor.trim() : (letterheadConfig.instructorName || 'Sensei');
   const signerGrade = hasCustomExaminer ? '' : (letterheadConfig.instructorGrade ? ' — '+esc(letterheadConfig.instructorGrade) : '');
-  const signatureImg = (!hasCustomExaminer && diplomaConfig.signatureImage) ? `<img src="${diplomaConfig.signatureImage}" class="diploma-signature-img">` : '';
+  const signatureImg = (!hasCustomExaminer && diplomaConfig.signatureImage) ? `<img src="${esc(diplomaConfig.signatureImage)}" class="diploma-signature-img">` : '';
   return `
     <div class="${borderClass}">
       ${numLine}
       ${qrLine}
       ${decorations}
-      ${schoolLogo?`<img src="${schoolLogo}" class="diploma-logo" style="position:relative;z-index:1;">`:''}
+      ${schoolLogo?`<img src="${esc(schoolLogo)}" class="diploma-logo" style="position:relative;z-index:1;">`:''}
       <div class="diploma-dojo" style="position:relative;z-index:1;">${esc(letterheadConfig.dojoName)}</div>
       ${letterheadConfig.subtitle?`<div class="diploma-sub" style="position:relative;z-index:1;">${esc(letterheadConfig.subtitle)}</div>`:''}
       <div class="diploma-title" style="position:relative;z-index:1;font-size:${sz.title}px;">${esc(titleLine)}</div>
@@ -3390,9 +3369,8 @@ function buildDiplomaHtml(s, a, overrides, diplomaNumber){
 function renderDiplomaQrCodes(container){
   if(typeof QRCode === 'undefined') return;
   container.querySelectorAll('.diploma-qr[data-verify]').forEach(el=>{
-    const num = el.dataset.verify;
     el.innerHTML = '';
-    const url = location.origin + location.pathname + '#verify-' + num;
+    const url = location.origin + '/#verify-' + el.dataset.verify;
     try{ new QRCode(el, {text:url, width:120, height:120, colorDark:'#211B17', colorLight:'#ffffff'}); }catch(e){}
   });
 }
@@ -3432,11 +3410,11 @@ function openCustomCertificate(){
   if(type==='examen'){
     const beltId = document.getElementById('cc-belt').value;
     const belt = beltById(beltId);
-    a = {id:'custom-'+Date.now(), type, activity:'Examen de '+belt.name, date, place, instructor:'', belt:beltId, result:'aprobado'};
+    a = {custom:true, id:'custom-'+Date.now(), type, activity:'Examen de '+belt.name, date, place, instructor:'', belt:beltId, result:'aprobado'};
   } else {
     const activity = document.getElementById('cc-activity').value.trim();
     if(!activity){ toast('Describí el motivo o la actividad.'); return; }
-    a = {id:'custom-'+Date.now(), type, activity, date, place, instructor:''};
+    a = {custom:true, id:'custom-'+Date.now(), type, activity, date, place, instructor:''};
   }
   openDiplomaModal(s, a);
 }
@@ -3483,7 +3461,7 @@ function openDiplomaModal(s, a){
         <div><label class="hint" style="margin:0 0 4px;display:block;">Texto</label><input type="number" id="dip-textSize" value="${diplomaConfig.textSize}" min="6" max="40" oninput="refreshDiplomaPreview()"></div>
       </div>
     </div>
-    <div class="diploma" id="diploma-preview-wrap">${buildDiplomaHtml(s,a,{},nextDiplomaNumber)}</div>
+    <div class="diploma" id="diploma-preview-wrap">${buildDiplomaHtml(s,a,{},nextDiplomaNumber,null)}</div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cerrar</button>
       <button class="btn btn-dark" onclick="printDiploma()">Imprimir / Guardar como PDF</button>
@@ -3503,16 +3481,21 @@ function diplomaOverridesFromForm(){
   };
 }
 function refreshDiplomaPreview(){
-  document.getElementById('diploma-preview-wrap').innerHTML = buildDiplomaHtml(currentDiplomaStudent, currentDiplomaActivity, diplomaOverridesFromForm(), nextDiplomaNumber);
+  document.getElementById('diploma-preview-wrap').innerHTML = buildDiplomaHtml(currentDiplomaStudent, currentDiplomaActivity, diplomaOverridesFromForm(), nextDiplomaNumber, null);
   renderDiplomaQrCodes(document.getElementById('diploma-preview-wrap'));
 }
-function printDiploma(){
+async function printDiploma(){
   const s = currentDiplomaStudent, a = currentDiplomaActivity;
   const size = document.getElementById('dip-size') ? document.getElementById('dip-size').value : diplomaConfig.paperSize;
+  const overrides = diplomaOverridesFromForm();
+  const item = a.custom
+    ? {studentId: s.id || undefined, studentName: s.name, type: a.type, activity: a.activity, date: a.date}
+    : {activityId: a.id};
+  const r = await api('POST', '/diplomas/issue', {items: [item]});
+  const d = r.issued[0];
+  issuedDiplomas.push(d); nextDiplomaNumber = r.nextDiplomaNumber;
   setPrintPageSize(size, 'landscape');
-  const number = nextDiplomaNumber++;
-  issuedDiplomas.push({number, studentId: s.id||null, studentName:s.name, activity:a.activity, type:a.type, date:a.date, issuedOn:todayIso()});
-  document.getElementById('print-area').innerHTML = `<div class="diploma">${buildDiplomaHtml(s,a,diplomaOverridesFromForm(),number)}</div>`;
+  document.getElementById('print-area').innerHTML = `<div class="diploma">${buildDiplomaHtml(s, a, overrides, d.number, d.verifyCode)}</div>`;
   renderDiplomaQrCodes(document.getElementById('print-area'));
   if(document.getElementById('diplomas-log')) paintDiplomasLog();
   setTimeout(()=>window.print(), 80);
@@ -3528,8 +3511,10 @@ function paintMiProgramaActivities(){
 /* ============================================================
    ALUMNO · MIS CUOTAS (con medio de pago y compartir comprobante)
 ============================================================ */
+let misCuotasTarget = 'panel-mis-cuotas';
 function renderMisCuotas(targetId){
-  const target = targetId || 'panel-mis-cuotas';
+  const target = targetId || misCuotasTarget;
+  misCuotasTarget = target;
   const s = activeStudent();
   const mine = payments.filter(p=>p.studentId===s.id);
   document.getElementById(target).innerHTML = `
@@ -3541,11 +3526,11 @@ function renderMisCuotas(targetId){
           ${mine.slice().reverse().map(p=>`
             <tr>
               <td>${esc(p.concept)}</td><td>${esc(p.period)}</td><td>${fmtMoney(p.amount)}</td>
-              <td>${p.status==='pagada' ? p.medium : (p.status==='revision' ? p.proofMedium : '—')}</td>
-              <td>${p.status==='pagada' ? `<span class="tag tag-ok">Pagada · ${p.paidOn}</span>` : (p.status==='revision' ? '<span class="tag tag-review">En revisión</span>' : '<span class="tag tag-warn">Pendiente</span>')}</td>
+              <td>${p.status==='pagada' ? esc(p.medium) : (p.status==='revision' ? esc(p.proofMedium) : '—')}</td>
+              <td>${p.status==='pagada' ? `<span class="tag tag-ok">Pagada · ${esc(p.paidOn)}</span>` : (p.status==='revision' ? '<span class="tag tag-review">En revisión</span>' : '<span class="tag tag-warn">Pendiente</span>')}</td>
               <td>${p.status==='pendiente' ? `<button class="btn-ghost" onclick="openProofModal('${p.id}')">Compartir comprobante</button>` : ''}</td>
             </tr>
-          `).join('')}
+          `).join('') || '<tr><td colspan="6" class="att-empty">Todavía no tenés cuotas registradas.</td></tr>'}
         </tbody>
       </table>
     </div>
@@ -3557,7 +3542,7 @@ function openProofModal(paymentId){
     <h3 class="serif">Compartir comprobante de pago</h3>
     <p class="hint" style="margin-top:0">Si ya transferiste o pagaste por Mercado Pago, subí el comprobante para que el dojo confirme tu pago.</p>
     <div class="field"><label>Medio utilizado</label><select id="proof-medium"><option>Transferencia</option><option>Mercado Pago</option></select></div>
-    <div class="field"><label>Comprobante (imagen o PDF)</label><input type="file" id="proof-file"></div>
+    <div class="field"><label>Comprobante (imagen o PDF, hasta 6 MB)</label><input type="file" id="proof-file" accept="image/*,application/pdf"></div>
     <div class="field"><label>Nota (opcional)</label><textarea id="proof-note" placeholder="Ej: transferí desde la cuenta de mi tutor"></textarea></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -3565,46 +3550,56 @@ function openProofModal(paymentId){
     </div>
   `);
 }
-function submitProof(paymentId){
-  const p = payments.find(x=>x.id===paymentId);
+async function submitProof(paymentId){
   const fileInput = document.getElementById('proof-file');
-  p.status = 'revision';
-  p.proofMedium = document.getElementById('proof-medium').value;
-  p.proofNote = document.getElementById('proof-note').value.trim();
-  p.proofFileName = fileInput.files[0] ? fileInput.files[0].name : '';
+  let fileId = null;
+  if(fileInput.files[0]) fileId = (await uploadFile(fileInput.files[0], 'proof')).id;
+  const r = await api('POST', `/payments/${paymentId}/proof`, {
+    medium: document.getElementById('proof-medium').value,
+    note: document.getElementById('proof-note').value.trim(),
+    fileId,
+  });
+  upsertById(payments, r.payment);
   closeModal();
   renderMisCuotas();
   toast('Comprobante enviado. El dojo va a confirmar tu pago.');
 }
-
 /* ============================================================
    ALUMNO · MI ASISTENCIA
 ============================================================ */
-function renderMiAsistencia(){
-  const s = activeStudent();
-  const dates = attendanceHistory[s.id] || [];
-  document.getElementById('panel-mi-asistencia').innerHTML = `
-    <div class="main-head"><div><h1>Mi asistencia</h1><p>Clases a las que asististe este mes.</p></div></div>
-    <div class="cards-row" style="max-width:320px">
-      <div class="stat-card"><div class="num">${dates.length}</div><div class="lbl">Clases este mes</div></div>
+async function renderMiAsistencia(){
+  const panel = document.getElementById('panel-mi-asistencia');
+  if(!panel) return;
+  panel.innerHTML = '<div class="loading-note">Cargando…</div>';
+  const r = await api('GET', '/attendance/me');
+  classesSinceBelt = r.classesSinceBelt;
+  panel.innerHTML = `
+    <div class="main-head"><div><h1>Mi asistencia</h1><p>Clases a las que asististe en ${esc(monthLabel(r.month))}.</p></div></div>
+    <div class="cards-row" style="max-width:520px">
+      <div class="stat-card"><div class="num">${r.dates.length}</div><div class="lbl">Clases este mes</div></div>
+      <div class="stat-card"><div class="num">${r.classesSinceBelt}</div><div class="lbl">Clases desde tu último cinturón</div></div>
     </div>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Fecha</th><th>Estado</th></tr></thead>
-        <tbody>${dates.map(d=>`<tr><td>${d}</td><td><span class="tag tag-ok">Presente</span></td></tr>`).join('')}</tbody>
+        <tbody>${r.dates.map(d=>`<tr><td>${fmtDateEs(d)}</td><td><span class="tag tag-ok">Presente</span></td></tr>`).join('') || '<tr><td colspan="2" class="att-empty">Todavía no hay clases registradas este mes.</td></tr>'}</tbody>
       </table>
     </div>
   `;
 }
-
 /* ============================================================
    HELPERS: modal + toast
 ============================================================ */
-function showModal(html){
+let modalLocked = false;
+function showModal(html, opts){
+  modalLocked = !!(opts && opts.locked);
   document.getElementById('modal-body').innerHTML = html;
   document.getElementById('modal-overlay').classList.add('active');
 }
-function closeModal(){ document.getElementById('modal-overlay').classList.remove('active'); }
+function closeModal(){
+  if(modalLocked) return;
+  document.getElementById('modal-overlay').classList.remove('active');
+}
 document.getElementById('modal-overlay').addEventListener('click', e=>{ if(e.target.id==='modal-overlay') closeModal(); });
 
 let toastTimer;
@@ -3633,13 +3628,13 @@ function renderHome(){
   document.getElementById('video-section').style.display = showVid ? 'block' : 'none';
   document.getElementById('nav-link-video').style.display = showVid ? '' : 'none';
   if(showVid){
-    document.getElementById('home-video-wrap').innerHTML = `<div class="video-embed"><iframe src="${toEmbedUrl(homeContent.videoUrl.trim())}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+    document.getElementById('home-video-wrap').innerHTML = `<div class="video-embed"><iframe src="${esc(toEmbedUrl(homeContent.videoUrl.trim()))}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
   }
   paintHomeContact();
   document.getElementById('home-belts').innerHTML = ['infantil','adulto'].map(g=>`
     <p style="font-size:12px;font-weight:700;color:var(--ink-soft);margin:14px 0 2px;text-transform:uppercase;letter-spacing:.06em;">${groupLabel(g)}</p>
     <div class="belt-path">
-      ${beltsForGroup(g).map(b=>`<div class="bp-item">${beltDotHtml(b,'bp-dot')}${b.name}</div>`).join('')}
+      ${beltsForGroup(g).map(b=>`<div class="bp-item">${beltDotHtml(b,'bp-dot')}${esc(b.name)}</div>`).join('')}
     </div>
   `).join('');
   const sorted = events.slice().sort((a,b)=>a.date.localeCompare(b.date));
@@ -3650,20 +3645,21 @@ function renderHome(){
   `).join('') : '<p class="desc" style="margin:0">Muy pronto vamos a anunciar las próximas actividades.</p>';
   document.getElementById('home-schedule').innerHTML = schedule.map(s=>`
     <div class="home-card" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.16);border-top-color:var(--shu);">
-      <strong style="color:#F2E9DD;">${s.day}</strong><div class="meta" style="color:#C9BBA8;">${esc(s.details)}</div>
+      <strong style="color:#F2E9DD;">${esc(s.day)}</strong><div class="meta" style="color:#C9BBA8;">${esc(s.details)}</div>
     </div>
   `).join('');
 }
 function paintHomeContact(){
   const lh = letterheadConfig;
   const waDigits = (lh.whatsapp||'').replace(/[^\d]/g,'');
+  const webUrl = /^https?:\/\//.test(lh.website||'') ? lh.website : 'https://'+(lh.website||'');
   const items = [
-    lh.show.address && lh.address && {label:'Dirección', value:lh.address},
-    lh.show.phone && lh.phone && {label:'Teléfono', value:lh.phone},
-    lh.show.whatsapp && lh.whatsapp && {label:'WhatsApp', value: waDigits.length>=8 ? `<a href="https://wa.me/${waDigits}" target="_blank" rel="noopener">${lh.whatsapp}</a>` : lh.whatsapp},
-    lh.show.email && lh.email && {label:'Email', value:`<a href="mailto:${lh.email}">${lh.email}</a>`},
-    lh.show.website && lh.website && {label:'Sitio web', value: `<a href="${/^https?:\/\//.test(lh.website)?lh.website:'https://'+lh.website}" target="_blank" rel="noopener">${lh.website}</a>`},
-    lh.show.social && lh.social && {label:'Redes sociales', value: /^https?:\/\//.test(lh.social) ? `<a href="${lh.social}" target="_blank" rel="noopener">${lh.social}</a>` : lh.social},
+    lh.show.address && lh.address && {label:'Dirección', value:esc(lh.address)},
+    lh.show.phone && lh.phone && {label:'Teléfono', value:esc(lh.phone)},
+    lh.show.whatsapp && lh.whatsapp && {label:'WhatsApp', value: waDigits.length>=8 ? `<a href="https://wa.me/${waDigits}" target="_blank" rel="noopener">${esc(lh.whatsapp)}</a>` : esc(lh.whatsapp)},
+    lh.show.email && lh.email && {label:'Email', value:`<a href="mailto:${esc(lh.email)}">${esc(lh.email)}</a>`},
+    lh.show.website && lh.website && {label:'Sitio web', value: `<a href="${esc(webUrl)}" target="_blank" rel="noopener">${esc(lh.website)}</a>`},
+    lh.show.social && lh.social && {label:'Redes sociales', value: /^https?:\/\//.test(lh.social) ? `<a href="${esc(lh.social)}" target="_blank" rel="noopener">${esc(lh.social)}</a>` : esc(lh.social)},
   ].filter(Boolean);
   const section = document.getElementById('contacto');
   const navLink = document.querySelector('.home-nav-links a[href="#contacto"]');
@@ -3674,75 +3670,98 @@ function paintHomeContact(){
     <div class="home-card"><strong>${it.label}</strong><div class="meta">${it.value}</div></div>
   `).join('');
 }
-function handleQrCheckin(){
-  const loggedIn = getComputedStyle(document.getElementById('app-shell')).display !== 'none';
-  if(!loggedIn){
-    history.replaceState(null, '', location.pathname + location.search + '#login');
-    toast('Iniciá sesión y volvé a escanear el código para marcar tu presencia.');
+function handleQrCheckin(token){
+  if(!me){
+    // Sin sesión: se guarda el código, se pide ingresar y al entrar se marca la presencia sola.
+    if(token) sessionStorage.setItem('pendingCheckin', token);
+    history.replaceState(null, '', location.pathname + '#login');
+    toast('Iniciá sesión para marcar tu presencia.');
     route();
     return;
   }
-  history.replaceState(null, '', location.pathname + location.search);
-  if(currentRole==='admin'){
-    toast('Ingresá como Senpai/Kohai para marcarte presente con este código.');
+  history.replaceState(null, '', location.pathname);
+  doCheckin(token);
+}
+async function doCheckin(token){
+  if(currentRole==='admin'){ toast('Ingresá como Senpai/Kohai para marcarte presente con este código.'); return; }
+  let r;
+  try{
+    r = await api('POST', '/attendance/checkin', {token});
+  }catch(e){
+    if(!(e instanceof ApiError)) throw e;
+    showModal(`
+      <div style="text-align:center;padding:10px 0;">
+        <div style="font-size:40px;">✕</div>
+        <h3 class="serif" style="margin:10px 0 4px;">No se pudo registrar</h3>
+        <p style="color:var(--ink-soft);margin:0;">${esc(e.message)}</p>
+        <button class="btn btn-dark" style="margin-top:16px" onclick="closeModal()">Cerrar</button>
+      </div>`);
     return;
   }
+  if(!r.already) classesSinceBelt++;
   const s = activeStudent();
-  const already = todaysAttendance.has(s.id);
-  if(!already) todaysAttendance.add(s.id);
-  if(document.getElementById('att-grid')) paintAttendanceGrid('att-grid', asistenciaFilter);
   showModal(`
     <div style="text-align:center;padding:10px 0;">
-      <div style="font-size:40px;">${already?'↺':'✓'}</div>
-      <h3 class="serif" style="margin:10px 0 4px;">${already?'Ya estabas presente':'¡Presente registrado!'}</h3>
-      <p style="color:var(--ink-soft);margin:0;">${esc(s.name)} — ${fmtDateEs(todayIso())}</p>
+      <div style="font-size:40px;">${r.already?'↺':'✓'}</div>
+      <h3 class="serif" style="margin:10px 0 4px;">${r.already?'Ya estabas presente':'¡Presente registrado!'}</h3>
+      <p style="color:var(--ink-soft);margin:0;">${esc(s.name)} — ${fmtDateEs(r.date)}</p>
       <button class="btn btn-dark" style="margin-top:16px" onclick="closeModal()">Listo</button>
     </div>
   `);
 }
-function openAttendanceQr(){
-  const url = location.origin + location.pathname + '#checkin';
+async function openAttendanceQr(){
+  const t = await api('GET', '/attendance/qr');
+  const url = location.origin + '/#checkin-' + t.token;
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">Código QR de asistencia</h3>
     <p class="hint" style="margin-top:0">Pegalo en la pared del dojo. Cada alumno lo escanea con su celular (ya logueado) para marcarse presente solo.</p>
     <div id="qr-render" style="display:flex;justify-content:center;padding:16px;background:#fff;border-radius:var(--radius);"></div>
     <p class="hint" style="text-align:center;word-break:break-all;">${esc(url)}</p>
+    ${currentRole==='admin' ? `<p class="hint">Si el código se filtró fuera del dojo, generá uno nuevo: el anterior deja de funcionar y hay que volver a imprimirlo.</p>
+    <div class="modal-actions"><button class="btn" onclick="rotateQr()">Generar código nuevo</button><button class="btn btn-dark" onclick="window.print()">Imprimir</button></div>` : ''}
   `);
   document.getElementById('qr-render').innerHTML = '';
   new QRCode(document.getElementById('qr-render'), {text:url, width:200, height:200, colorDark:'#211B17', colorLight:'#ffffff'});
 }
+async function rotateQr(){
+  await api('POST', '/attendance/qr/rotate', {});
+  toast('Código nuevo generado. Imprimí el QR actualizado.');
+  openAttendanceQr();
+}
 function route(){
   const hash = location.hash;
-  const home = document.getElementById('home-screen');
-  const login = document.getElementById('login-screen');
-  const insc = document.getElementById('inscripcion-screen');
-  const verify = document.getElementById('verify-screen');
-  if(hash === '#checkin'){ handleQrCheckin(); return; }
-  home.style.display = 'none';
-  login.style.display = 'none';
-  insc.style.display = 'none';
-  verify.style.display = 'none';
+  if(hash.indexOf('#checkin')===0){ handleQrCheckin(hash.replace(/^#checkin-?/, '')); return; }
+  const screens = {home:'home-screen', login:'login-screen', insc:'inscripcion-screen', verify:'verify-screen'};
+  const hide = ()=>Object.values(screens).forEach(id=>document.getElementById(id).style.display = 'none');
+  const isPublicPage = hash === '#inscripcion' || hash.indexOf('#verify-')===0;
+  hide();
+  // Con la sesión iniciada se ve el sistema (salvo en las páginas públicas: ficha de inscripción y verificación).
+  if(me && !isPublicPage){ document.getElementById('app-shell').style.display = 'block'; return; }
+  document.getElementById('app-shell').style.display = 'none';
   if(hash === '#inscripcion'){
-    insc.style.display = 'flex';
+    document.getElementById(screens.insc).style.display = 'flex';
     document.getElementById('insc-card').innerHTML = buildInscForm(false);
     window.scrollTo(0,0);
   } else if(hash === '#login'){
-    login.style.display = 'flex';
+    document.getElementById(screens.login).style.display = 'flex';
     window.scrollTo(0,0);
-  } else if(hash.indexOf('#verify-')===0){
-    verify.style.display = 'flex';
+  } else if(isPublicPage){
+    document.getElementById(screens.verify).style.display = 'flex';
     renderVerifyScreen(hash.replace('#verify-',''));
     window.scrollTo(0,0);
   } else {
-    home.style.display = 'block';
+    document.getElementById(screens.home).style.display = 'block';
     renderHome();
   }
 }
-function renderVerifyScreen(numberStr){
-  const number = parseInt(numberStr);
-  const record = issuedDiplomas.find(d=>d.number===number);
-  document.getElementById('verify-card').innerHTML = record ? `
+async function renderVerifyScreen(code){
+  const card = document.getElementById('verify-card');
+  card.innerHTML = '<div class="loading-note">Verificando…</div>';
+  let record = null;
+  try{ record = await api('GET', '/public/verify/' + encodeURIComponent(code)); }
+  catch(e){ if(!(e instanceof ApiError) || e.status!==404) { card.innerHTML = `<div class="insc-done"><p style="color:var(--ink-soft)">${esc(e.message)}</p></div>`; return; } }
+  card.innerHTML = record ? `
     <div class="insc-done">
       <div class="mark">✓</div>
       <h2 class="serif" style="margin:14px 0 6px;">Diploma auténtico</h2>
@@ -3751,16 +3770,32 @@ function renderVerifyScreen(numberStr){
         <strong>Alumno:</strong> ${esc(record.studentName)}<br>
         <strong>Logro:</strong> ${esc(record.activity)} (${esc(activityTypeLabel(record.type))})<br>
         <strong>Fecha:</strong> ${fmtDateEs(record.date)}<br>
-        <strong>Emitido por:</strong> ${esc(letterheadConfig.dojoName)}
+        <strong>Emitido por:</strong> ${esc(record.dojoName)}
       </p>
     </div>
   ` : `
     <div class="insc-done">
       <div class="mark" style="color:var(--ink-soft);">✕</div>
       <h2 class="serif" style="margin:14px 0 6px;">No encontrado</h2>
-      <p style="color:var(--ink-soft);font-size:14px;line-height:1.6;">No hay ningún diploma con el número ${esc(numberStr)} registrado en este dispositivo.</p>
+      <p style="color:var(--ink-soft);font-size:14px;line-height:1.6;">No hay ningún diploma registrado con ese código. Revisá que el QR esté completo.</p>
     </div>
   `;
 }
 window.addEventListener('hashchange', route);
-route();
+
+/* ============================================================
+   ARRANQUE
+============================================================ */
+async function init(){
+  applyTheme();
+  try{
+    await loadPublicConfig();
+    const s = await api('GET', '/auth/session');
+    if(s.authenticated){ me = s; await enterApp(); }
+  }catch(e){
+    console.error(e);
+    toast(e instanceof ApiError ? e.message : 'No se pudo conectar con el servidor.');
+  }
+  route();
+}
+init();

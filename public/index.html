@@ -1,9 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shuri-te Kan · Gestión de dojo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<script src="/vendor/qrcode.min.js"></script>
+</head>
 <body>
 
 <div id="home-screen">
   <div class="home-nav">
     <div class="brand-mark">
-      <div class="hero-logo" style="width:38px;height:38px;box-shadow:none;"><img src="__IMG__" alt="Shuri-te Kan"></div>
+      <div class="hero-logo" style="width:38px;height:38px;box-shadow:none;"><img data-logo alt="Shuri-te Kan" hidden></div>
       <span style="color:var(--ink);font-weight:700;letter-spacing:.04em;">SHURI-TE KAN</span>
     </div>
     <div class="home-nav-links">
@@ -20,7 +32,7 @@
 
   <div class="home-hero" id="home-hero">
     <div class="home-hero-inner">
-      <div class="hero-logo"><img src="__IMG__" alt="Shuri-te Kan"></div>
+      <div class="hero-logo"><img data-logo alt="Shuri-te Kan" hidden></div>
       <div class="kanji-line">空手道 ・ 小林流 ・ 古武道</div>
       <h1 id="home-hero-title">Karate-Do Shorin-ryu (Kobayashi-ryu) y Kobudo</h1>
       <p class="lead" id="home-hero-lead">Clases para adultos e infantiles en Dojo Central y Dojo Norte. Disciplina, tradición y comunidad, cinturón a cinturón.</p>
@@ -77,10 +89,10 @@
 </div>
 
 <div id="login-screen">
-  <div class="login-left" style="background-image:linear-gradient(165deg, rgba(28,22,19,.94), rgba(20,15,12,.90)), url('__IMG__');background-size:cover;background-position:center 32%;">
+  <div class="login-left" style="background-image:linear-gradient(165deg, rgba(28,22,19,.94), rgba(20,15,12,.90)), url('/img/hero-default.jpg');background-size:cover;background-position:center 32%;">
     <div>
       <div class="hero-mark">
-        <div class="hero-logo"><img src="__IMG__" alt="Shuri-te Kan"></div>
+        <div class="hero-logo"><img data-logo alt="Shuri-te Kan" hidden></div>
               </div>
       <div class="kanji-line">空手道 ・ 小林流 ・ 古武道</div>
       <h1>El registro del dojo, con la disciplina de siempre.</h1>
@@ -92,7 +104,7 @@
       </div>
       <p class="tag">Cuotas, asistencia, programas por cinturón, biblioteca y foro — para el sensei, los instructores y cada alumno.</p>
     </div>
-    <div class="login-foot">Prototipo de trabajo — datos de ejemplo, sin conexión a un servidor real.</div>
+    <div class="login-foot">Shuri-te Kan · Karate-Do Shorin-ryu y Kobudo</div>
   </div>
   <div class="login-right">
     <div class="login-card">
@@ -107,25 +119,22 @@
       <div id="login-field-admin" class="hidden">
         <div class="field">
           <label>Usuario</label>
-          <input type="text" id="sensei-username" list="sensei-usernames" autocomplete="off" placeholder="Usuario del Sensei">
-          <datalist id="sensei-usernames"></datalist>
+          <input type="text" id="sensei-username" autocomplete="username" placeholder="Usuario del Sensei">
         </div>
-        <div class="field"><label>Contraseña</label><input type="password" id="sensei-password" autocomplete="off"></div>
+        <div class="field"><label>Contraseña</label><input type="password" id="sensei-password" autocomplete="current-password"></div>
       </div>
 
       <div id="login-field-alumno">
         <div class="field">
           <label>Usuario</label>
-          <input type="text" id="senpai-username" list="senpai-usernames" autocomplete="off" placeholder="Elegí de la lista o escribí tu usuario">
-          <datalist id="senpai-usernames"></datalist>
+          <input type="text" id="senpai-username" autocomplete="username" placeholder="Tu usuario">
         </div>
-        <div class="field"><label>Contraseña</label><input type="password" id="senpai-password" autocomplete="off"></div>
+        <div class="field"><label>Contraseña</label><input type="password" id="senpai-password" autocomplete="current-password"></div>
         <a href="javascript:void(0)" class="back-home" style="margin-bottom:14px;display:inline-block;" onclick="openForgotPassword()">¿Olvidaste tu contraseña?</a>
       </div>
 
       <button class="btn-primary" id="login-btn" onclick="login()">Iniciar sesión</button>
       <p class="demo-note" id="login-error" style="display:none;color:var(--shu-deep);"></p>
-      <p class="demo-note">Prototipo de prueba: las contraseñas de ejemplo son el DNI de cada alumno (Senpai/Kohai) o la que te haya dado el Sensei.</p>
     </div>
   </div>
 </div>
@@ -156,3 +165,7 @@
 <div class="toast" id="toast"></div>
 
 <div id="print-area"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

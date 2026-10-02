@@ -8,9 +8,9 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "start": "node server/index.js",
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node --test --test-concurrency=1 test/",
+    "test": "node --disable-warning=ExperimentalWarning --test --test-concurrency=1 \"test/*.test.js\"",
     "seed:demo": "node scripts/seed-demo.js",
     "create-admin": "node scripts/create-admin.js",
     "backup": "node scripts/backup.js",
