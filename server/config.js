@@ -18,6 +18,8 @@ module.exports = {
   timezone: env.TZ_DOJO || 'America/Argentina/Buenos_Aires',
   sessionDays: parseInt(env.SESSION_DAYS, 10) || 14,
   sessionAbsoluteDays: 60,
+  // Contraseña inicial de alumnos nuevos o con clave restablecida (se puede cambiar con DEFAULT_STUDENT_PASSWORD).
+  defaultStudentPassword: env.DEFAULT_STUDENT_PASSWORD || 'karatedo123',
   senseiUser: env.SENSEI_USER || 'sensei',
   senseiPassword: env.SENSEI_PASSWORD || '',
   maxUploadBytes: 6 * 1024 * 1024,

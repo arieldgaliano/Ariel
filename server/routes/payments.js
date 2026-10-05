@@ -55,11 +55,11 @@ function markPaid(conn, id, { amountCents, medium, method, confirmedBy }) {
     .run(todayIso(), amountCents, medium, method, receiptNo, confirmedBy, id);
 }
 
-// Lista: el Sensei y quien cobra ven todo; el resto solo sus propios pagos.
+// Lista: el Sensei y quien cobra ven todo; el resto solo sus propios pagos (sin los anulados).
 r.get('/', perms.requireAuth, (req, res) => {
   const rows = canCollect(req.auth)
     ? db.get().prepare('SELECT * FROM payments ORDER BY created_at, rowid').all()
-    : db.get().prepare('SELECT * FROM payments WHERE student_id = ? ORDER BY created_at, rowid').all(req.auth.studentId);
+    : db.get().prepare("SELECT * FROM payments WHERE student_id = ? AND status != 'anulada' ORDER BY created_at, rowid").all(req.auth.studentId);
   res.json({ payments: rows.map(S.payment) });
 });
 
@@ -160,6 +160,27 @@ r.post('/:id/proof', perms.requireStudent, (req, res) => {
       .run(medium, note, b.fileId || null, nowIso(), p.id);
   });
   security.audit(req, 'payment_proof_submitted', 'payment', p.id);
+  res.json({ payment: fresh(p.id) });
+});
+
+// Corregir un error de carga (solo el Sensei). El registro y el motivo quedan guardados.
+// Anular: pendiente, en revisión o pagada → "anulada" (el número de recibo no se reutiliza).
+r.post('/:id/void', perms.requireAdmin, (req, res) => {
+  const p = getPayment(req.params.id);
+  if (p.status === 'anulada') throw new ApiError(409, 'Ese pago ya está anulado.');
+  const reason = v.str(v.object(req.body).reason, 'Motivo', { max: 300, required: true });
+  db.get().prepare("UPDATE payments SET status = 'anulada', void_reason = ?, voided_at = ?, voided_by = ? WHERE id = ?")
+    .run(reason, nowIso(), req.auth.user.id, p.id);
+  security.audit(req, 'payment_voided', 'payment', p.id, { reason, wasStatus: p.status, receipt: p.receipt_no });
+  res.json({ payment: fresh(p.id) });
+});
+
+// Rechazar un comprobante dudoso: vuelve a "pendiente" y el alumno puede volver a enviarlo.
+r.post('/:id/reject-proof', perms.requireAdmin, (req, res) => {
+  const p = getPayment(req.params.id);
+  if (p.status !== 'revision') throw new ApiError(409, 'Ese pago no tiene un comprobante en revisión.');
+  db.get().prepare("UPDATE payments SET status = 'pendiente', proof_medium = NULL, proof_note = NULL, proof_file_id = NULL, proof_submitted_at = NULL WHERE id = ?").run(p.id);
+  security.audit(req, 'payment_proof_rejected', 'payment', p.id);
   res.json({ payment: fresh(p.id) });
 });
 

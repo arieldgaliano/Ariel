@@ -37,7 +37,7 @@ const payment = r => ({
   id: r.id, studentId: r.student_id, tipo: r.tipo, period: r.period, periodMonth: r.period_month,
   concept: r.concept, amount: fromCents(r.amount_cents), status: r.status,
   paidOn: r.paid_on || undefined, medium: r.medium || undefined, method: r.method || undefined,
-  receiptNo: receiptNumber(r),
+  receiptNo: receiptNumber(r), voidReason: r.void_reason || undefined,
   proofMedium: r.proof_medium || undefined, proofNote: r.proof_note || undefined, proofUrl: fileUrl(r.proof_file_id) || undefined,
 });
 

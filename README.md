@@ -19,7 +19,7 @@ El prototipo original está en `prototipo/dojo.html` (solo de referencia).
 - Contraseñas con *scrypt* (nunca en texto plano). Tras 5 intentos fallidos el usuario se bloquea 15 minutos.
 - Sesiones por cookie `HttpOnly`; se cierran al suspender a un alumno o cambiar su contraseña.
 - **Cada acción se valida en el servidor** según el rol y los módulos que el Sensei habilitó; ocultar un botón es solo estético.
-- Contraseña inicial de un alumno = su DNI, pero el sistema le obliga a cambiarla al primer ingreso.
+- Contraseña inicial de todo alumno nuevo (o con clave restablecida): `karatedo123` (se cambia con la variable `DEFAULT_STUDENT_PASSWORD`). En el primer ingreso el sistema le pregunta si quiere cambiarla o conservarla.
   Si alguien olvida su clave, el Sensei la restablece (Alumnos → Más ▾ → Restablecer contraseña).
 - Fotos y comprobantes: solo los ve quien corresponde. Se valida el contenido real del archivo.
 

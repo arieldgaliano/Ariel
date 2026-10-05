@@ -84,6 +84,16 @@ module.exports = ({ setSessionCookie, clearSessionCookie }) => {
     res.json(sessionPayload(req.auth));
   });
 
+  // Primer ingreso: el alumno puede conservar la contraseña inicial en vez de cambiarla.
+  // (La cuenta del Sensei siempre tiene que elegir una propia.)
+  r.post('/keep-password', perms.requireAuth, (req, res) => {
+    if (req.auth.isAdmin) throw new ApiError(403, 'El Sensei tiene que elegir una contraseña propia.');
+    db.get().prepare('UPDATE users SET must_change_password = 0 WHERE id = ?').run(req.auth.user.id);
+    security.audit(req, 'password_kept', 'user', req.auth.user.id);
+    req.auth.user.must_change_password = 0;
+    res.json(sessionPayload(req.auth));
+  });
+
   // El Sensei cambia su propio usuario (no puede coincidir con el de un alumno).
   r.put('/username', perms.requireAdmin, (req, res) => {
     const body = v.object(req.body);

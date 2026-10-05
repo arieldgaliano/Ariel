@@ -6,13 +6,14 @@ const perms = require('../permissions');
 const queries = require('../queries');
 const security = require('../security');
 const { v } = require('../validate');
+const config = require('../config');
 const { ApiError, uuid, nowIso, todayIso, toCents } = require('../util');
 
 const r = express.Router();
 r.use(perms.requireAdmin);
 
-const slugify = name => String(name || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-  .replace(/[^a-z0-9\s]/g, '').trim().split(/\s+/).filter(Boolean).join('.');
+const slugify = name => String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  .replace(/[^a-z0-9.\s]/g, '').trim().split(/\s+/).filter(Boolean).join('.').replace(/\.{2,}/g, '.').replace(/^\.|\.$/g, '');
 
 function uniqueUsername(base, exceptUserId) {
   const root = slugify(base) || 'usuario';
@@ -59,8 +60,7 @@ r.post('/', async (req, res) => {
   checkDojo(dojo);
   const joinedOn = v.date(b.since, 'En la escuela desde') || todayIso();
   const dni = v.str(b.dni, 'DNI', { max: 20 });
-  const tempPassword = dni || security.randomTempPassword();
-  const hash = await security.hashPassword(tempPassword);
+  const hash = await security.hashPassword(config.defaultStudentPassword);
   const id = uuid();
   const now = nowIso();
 
@@ -81,8 +81,7 @@ r.post('/', async (req, res) => {
   security.audit(req, 'student_created', 'student', id, { name });
   res.status(201).json({
     student: queries.studentFull(id), username, duplicateName,
-    // La contraseña inicial solo se informa cuando la generó el sistema; si es el DNI, ya la conoce el Sensei.
-    initialPassword: dni ? null : tempPassword, passwordIsDni: !!dni,
+    initialPassword: config.defaultStudentPassword,
   });
 });
 
@@ -190,7 +189,7 @@ r.post('/:id/reset-password', async (req, res) => {
   if (!user) throw new ApiError(404, 'Alumno no encontrado.');
   const typed = v.str(v.object(req.body).password, 'Contraseña', { max: 200 });
   if (typed) security.assertStrongEnough(typed);
-  const password = typed || security.randomTempPassword();
+  const password = typed || config.defaultStudentPassword;
   db.get().prepare('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?').run(await security.hashPassword(password), user.id);
   security.destroyUserSessions(user.id);
   security.audit(req, 'password_reset', 'student', id);

@@ -126,8 +126,43 @@ test('inscripción pública: cualquiera envía; el Sensei aprueba y se crea alum
   const ap = await admin.post(`/api/inscriptions/${ana.id}/approve`, {});
   assert.equal(ap.status, 201);
   assert.equal(ap.data.student.belt, 'infantil-blanco');
-  assert.equal(ap.data.passwordIsDni, true);
-  assert.equal((await new Client(app.base).post('/api/auth/login', { username: ap.data.username, password: '50111222' })).status, 200);
+  assert.equal(ap.data.initialPassword, 'karatedo123');
+  assert.equal((await new Client(app.base).post('/api/auth/login', { username: ap.data.username, password: 'karatedo123' })).status, 200);
+});
+
+test('anular: solo el Sensei; queda el registro con motivo, deja de contar y se puede volver a cobrar', async () => {
+  const paid = (await admin.get('/api/payments')).data.payments.find(p => p.status === 'pagada' && p.receiptNo);
+  const ivan = await as('ivan.castro'); // instructor que cobra: no puede anular
+  assert.equal((await ivan.post(`/api/payments/${paid.id}/void`, { reason: 'x' })).status, 403);
+  assert.equal((await as('martina.suarez').then(c => c.post(`/api/payments/${paid.id}/void`, { reason: 'x' }))).status, 403);
+  assert.equal((await admin.post(`/api/payments/${paid.id}/void`, {})).status, 400, 'exige motivo');
+  const v = await admin.post(`/api/payments/${paid.id}/void`, { reason: 'Monto mal cargado' });
+  assert.equal(v.data.payment.status, 'anulada');
+  assert.equal(v.data.payment.voidReason, 'Monto mal cargado');
+  assert.equal(v.data.payment.receiptNo, paid.receiptNo, 'el recibo anulado queda registrado');
+  assert.equal((await admin.post(`/api/payments/${paid.id}/void`, { reason: 'otra vez' })).status, 409);
+  assert.equal((await admin.post(`/api/payments/${paid.id}/pay`, { amount: 1, medium: 'Físico', method: 'Efectivo' })).status, 409, 'no se cobra un anulado');
+  // el alumno ya no lo ve; quien cobra sí (marcado)
+  const owner = boot.students.find(s => s.id === paid.studentId);
+  const oc = await as(owner.username);
+  assert.ok(!(await oc.get('/api/payments')).data.payments.some(p => p.id === paid.id));
+  assert.ok((await ivan.get('/api/payments')).data.payments.some(p => p.id === paid.id && p.status === 'anulada'));
+  // se puede registrar el cobro correcto
+  const again = await admin.post('/api/payments', { studentId: paid.studentId, tipo: 'otros', customConcept: 'Corrección', amount: 100, medium: 'Físico', method: 'Efectivo' });
+  assert.equal(again.status, 201);
+  assert.notEqual(again.data.payment.receiptNo, paid.receiptNo);
+});
+
+test('rechazar comprobante: vuelve a pendiente y el alumno puede reenviarlo (solo Sensei)', async () => {
+  const lucas = await as('lucas.ferreyra');
+  const gen = (await admin.post('/api/payments/generate-monthly', { month: '2031-05' })).data.payments.find(p => p.studentId === ids['lucas.ferreyra']);
+  await lucas.post(`/api/payments/${gen.id}/proof`, { medium: 'Transferencia', note: 'ok' });
+  assert.equal((await lucas.post(`/api/payments/${gen.id}/reject-proof`, {})).status, 403);
+  const rej = await admin.post(`/api/payments/${gen.id}/reject-proof`, {});
+  assert.equal(rej.data.payment.status, 'pendiente');
+  assert.equal((await lucas.post(`/api/payments/${gen.id}/proof`, { medium: 'Mercado Pago' })).status, 200);
+  assert.equal((await admin.post(`/api/payments/${gen.id}/reject-proof`, {})).status, 200);
+  assert.equal((await admin.post(`/api/payments/${gen.id}/reject-proof`, {})).status, 409);
 });
 
 test('el formulario público tiene límite de envíos por hora', async () => {

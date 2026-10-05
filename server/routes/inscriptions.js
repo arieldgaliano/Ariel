@@ -7,6 +7,7 @@ const security = require('../security');
 const S = require('../serialize');
 const { v, cleanText } = require('../validate');
 const { ApiError, uuid, nowIso, todayIso } = require('../util');
+const config = require('../config');
 const { uniqueUsername } = require('./students');
 
 const r = express.Router();
@@ -44,8 +45,7 @@ r.post('/:id/approve', perms.requireAdmin, async (req, res) => {
   if (!ins) throw new ApiError(404, 'Solicitud no encontrada.');
   const belt = `${ins.grp}-blanco`;
   if (!db.get().prepare('SELECT 1 FROM belts WHERE id = ?').get(belt)) throw new ApiError(409, `No existe el cinturón inicial (${belt}). Creálo en Cinturones.`);
-  const password = ins.dni || security.randomTempPassword();
-  const hash = await security.hashPassword(password);
+  const hash = await security.hashPassword(config.defaultStudentPassword);
   const studentId = uuid();
   const now = nowIso(), today = todayIso();
   const modules = JSON.stringify(perms.DEFAULT_STUDENT_MODULES);
@@ -62,7 +62,7 @@ r.post('/:id/approve', perms.requireAdmin, async (req, res) => {
     conn.prepare('DELETE FROM inscriptions WHERE id = ?').run(id);
   });
   security.audit(req, 'inscription_approved', 'student', studentId);
-  res.status(201).json({ student: queries.studentFull(studentId), username, initialPassword: ins.dni ? null : password, passwordIsDni: !!ins.dni });
+  res.status(201).json({ student: queries.studentFull(studentId), username, initialPassword: config.defaultStudentPassword });
 });
 
 r.delete('/:id', perms.requireAdmin, (req, res) => {

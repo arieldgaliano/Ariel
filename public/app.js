@@ -259,7 +259,8 @@ function openForcedPasswordChange(){
   if(document.getElementById('fp-forced')) return;
   showModal(`
     <h3 class="serif" id="fp-forced">Elegí tu contraseña</h3>
-    <p class="hint" style="margin-top:0">Por seguridad tenés que cambiar la contraseña inicial antes de seguir. Mínimo 8 caracteres.</p>
+    <p class="hint" style="margin-top:0">${me.role==='admin' ? 'Por seguridad tenés que elegir tu propia contraseña antes de seguir.' : 'Podés elegir una contraseña propia (recomendado) o conservar la que te dieron.'} Mínimo 8 caracteres.</p>
+    ${me.role==='admin' ? '' : '<button class="btn" style="margin-bottom:14px" onclick="keepPassword()">Conservar la contraseña actual</button>'}
     <div class="field"><label>Contraseña actual (la que te dieron)</label><input type="password" id="fc-current" autocomplete="current-password"></div>
     <div class="field"><label>Nueva contraseña</label><input type="password" id="fc-new" autocomplete="new-password"></div>
     <div class="field"><label>Repetí la nueva contraseña</label><input type="password" id="fc-confirm" autocomplete="new-password"></div>
@@ -285,6 +286,11 @@ async function saveForcedPassword(){
   toast('Contraseña actualizada.');
   await enterApp();
 }
+async function keepPassword(){
+  me = await api('POST', '/auth/keep-password', {});
+  modalLocked = false; closeModal();
+  await enterApp();
+}
 function openForgotPassword(){
   showModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
@@ -304,9 +310,9 @@ function openResetPasswordModal(id){
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">Restablecer contraseña</h3>
     <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">
-      Para <strong>${esc(s.name)}</strong> (usuario: ${esc(s.username)}). Su contraseña actual dejará de funcionar, se cerrarán sus sesiones abiertas y tendrá que elegir una nueva al ingresar.
+      Para <strong>${esc(s.name)}</strong> (usuario: ${esc(s.username)}). Su contraseña actual dejará de funcionar y se cerrarán sus sesiones abiertas. Al ingresar con la nueva, el sistema le pregunta si quiere cambiarla o conservarla.
     </p>
-    <div class="field"><label>Contraseña temporal</label><input type="text" id="rp-new" placeholder="Dejá vacío para generar una automática" autocomplete="off"></div>
+    <div class="field"><label>Contraseña temporal</label><input type="text" id="rp-new" placeholder="Dejá vacío para usar la contraseña inicial del dojo" autocomplete="off"></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-dark" onclick="confirmResetPassword('${id}')">Restablecer</button>
@@ -1356,10 +1362,10 @@ function openStudentForm(id){
       <div class="field"><label>Teléfono de emergencia</label><input type="text" id="sf-emergencyPhone" value="${s?esc(s.emergencyPhone||''):''}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>DNI</label><input type="text" id="sf-dni" value="${s?esc(s.dni||''):''}" ${s?'':'placeholder="Se usa como contraseña inicial"'}></div>
+      <div class="field"><label>DNI</label><input type="text" id="sf-dni" value="${s?esc(s.dni||''):''}" ${s?'':'placeholder="Dato de la ficha"'}></div>
       <div class="field"><label>Usuario</label><input type="text" id="sf-username" value="${s?esc(s.username||''):''}" placeholder="se genera del nombre"></div>
     </div>
-    ${!s ? '<p class="hint" style="margin-top:-8px">El Senpai/Kohai va a poder iniciar sesión con este usuario y su DNI como contraseña inicial; el sistema le va a pedir cambiarla la primera vez. Sin DNI, se genera una contraseña temporal.</p>' : ''}
+    ${!s ? '<p class="hint" style="margin-top:-8px">El Senpai/Kohai ingresa con este usuario y la contraseña inicial del dojo; la primera vez el sistema le pregunta si quiere cambiarla o conservarla. El DNI se guarda solo como dato de la ficha.</p>' : ''}
     ${s ? `
     <div class="field">
       <label>Módulos habilitados</label>
@@ -1445,9 +1451,9 @@ function showNewStudentCredentials(student, result){
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3 class="serif">${esc(student.name)} fue dado de alta</h3>
     <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">Usuario: <strong>${esc(result.username)}</strong></p>
-    ${result.passwordIsDni
-      ? `<p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">Contraseña inicial: <strong>su DNI</strong>. El sistema le va a pedir cambiarla la primera vez que ingrese.</p>`
-      : `<p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">Contraseña temporal (no se vuelve a mostrar):</p><p class="pw-box">${esc(result.initialPassword)}</p>`}
+    <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">Contraseña inicial:</p>
+    <p class="pw-box">${esc(result.initialPassword)}</p>
+    <p class="hint">La primera vez que ingrese, el sistema le va a preguntar si quiere cambiarla o conservarla.</p>
     <div class="modal-actions"><button class="btn btn-dark" onclick="closeModal()">Listo</button></div>
   `);
 }
@@ -1523,7 +1529,7 @@ function renderPagos(){
   paintPagos();
 }
 function deudorStudentIds(){
-  return new Set(payments.filter(p=>p.status!=='pagada').map(p=>p.studentId));
+  return new Set(payments.filter(p=>p.status==='pendiente' || p.status==='revision').map(p=>p.studentId));
 }
 function filteredPagos(){
   const deudores = deudorStudentIds();
@@ -1553,13 +1559,16 @@ function paintPagos(){
     let estadoTag, accion;
     if(p.status==='pendiente'){
       estadoTag = '<span class="tag tag-warn">Pendiente</span>';
-      accion = `<button class="btn btn-sm btn-dark" onclick="openPaymentModal('${p.id}')">Registrar pago</button>`;
+      accion = `<button class="btn btn-sm btn-dark" onclick="openPaymentModal('${p.id}')">Registrar pago</button>${voidBtn(p)}`;
+    } else if(p.status==='anulada'){
+      estadoTag = '<span class="tag tag-off" title="'+esc(p.voidReason||'')+'">Anulada</span>';
+      accion = p.voidReason ? `<span class="hint" style="margin:0">${esc(p.voidReason)}</span>` : '';
     } else if(p.status==='revision'){
       estadoTag = '<span class="tag tag-review">En revisión</span>';
-      accion = `${p.proofUrl ? `<a class="btn-ghost" href="${esc(p.proofUrl)}" target="_blank" rel="noopener">Ver comprobante</a>` : ''}<button class="btn btn-sm btn-dark" onclick="confirmProofPayment('${p.id}')">Confirmar pago</button>`;
+      accion = `${p.proofUrl ? `<a class="btn-ghost" href="${esc(p.proofUrl)}" target="_blank" rel="noopener">Ver comprobante</a>` : ''}<button class="btn btn-sm btn-dark" onclick="confirmProofPayment('${p.id}')">Confirmar pago</button>${currentRole==='admin' ? `<button class="btn-ghost" onclick="rejectProof('${p.id}')">Rechazar</button>` : ''}${voidBtn(p)}`;
     } else {
       estadoTag = `<span class="tag tag-ok">Pagada · ${esc(p.paidOn)}</span>`;
-      accion = `<button class="btn-ghost" onclick="openReceiptModal('${p.id}')">Ver recibo</button>`;
+      accion = `<button class="btn-ghost" onclick="openReceiptModal('${p.id}')">Ver recibo</button>${voidBtn(p)}`;
     }
     return `<tr>
       <td>${esc(s.name)}</td><td>${esc(p.concept)}</td><td>${esc(p.period)}</td><td>${fmtMoney(p.amount)}</td>
@@ -1581,11 +1590,42 @@ function openPagosExport(){
   const header = ['Alumno','Concepto','Período','Monto','Medio','Estado'];
   const rows = list.map(p=>{
     const s = students.find(x=>x.id===p.studentId);
-    const estado = p.status==='pagada' ? 'Pagada' : (p.status==='revision' ? 'En revisión' : 'Pendiente');
+    const estado = p.status==='pagada' ? 'Pagada' : (p.status==='revision' ? 'En revisión' : (p.status==='anulada' ? 'Anulada' : 'Pendiente'));
     const medio = p.status==='pagada' ? p.medium : (p.status==='revision' ? p.proofMedium||'' : '');
     return [s.name, p.concept, p.period, fmtMoney(p.amount), medio, estado];
   });
   openExportModal({title:'Informe de cuotas y pagos', periodLabel:pagosPeriodLabel(), headers:header, rows, filenameBase:'cuotas_y_pagos'});
+}
+function voidBtn(p){
+  return currentRole==='admin' ? `<button class="btn-ghost danger" onclick="openVoidModal('${p.id}')">Anular</button>` : '';
+}
+async function rejectProof(id){
+  const r = await api('POST', `/payments/${id}/reject-proof`, {});
+  upsertById(payments, r.payment); paintPagos();
+  toast('El comprobante se rechazó: la cuota volvió a pendiente y el alumno puede enviarlo de nuevo.');
+}
+function openVoidModal(id){
+  const p = payments.find(x=>x.id===id);
+  const s = students.find(x=>x.id===p.studentId);
+  showModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 class="serif">Anular ${p.status==='pagada' ? 'pago' : 'registro'}</h3>
+    <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;margin-top:0">${esc(s.name)} · ${esc(p.concept)} · ${esc(p.period)} · ${fmtMoney(p.amount)}${p.receiptNo ? ' · Recibo '+esc(p.receiptNo) : ''}</p>
+    <p class="hint">Se usa para corregir un error de carga. Queda marcado como anulado (con su motivo) y deja de contar en los totales. Después podés registrar el pago correcto.</p>
+    <div class="field"><label>Motivo</label><input type="text" id="void-reason" placeholder="Ej: monto mal cargado" maxlength="300"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-dark" style="background:var(--shu-deep);border-color:var(--shu-deep)" onclick="confirmVoid('${id}')">Anular</button>
+    </div>
+  `);
+}
+async function confirmVoid(id){
+  const reason = document.getElementById('void-reason').value.trim();
+  if(!reason){ toast('Escribí el motivo de la anulación.'); return; }
+  const r = await api('POST', `/payments/${id}/void`, {reason});
+  upsertById(payments, r.payment);
+  closeModal(); paintPagos();
+  toast('Registro anulado.');
 }
 async function confirmProofPayment(paymentId){
   const r = await api('POST', `/payments/${paymentId}/confirm-proof`, {});

@@ -62,7 +62,7 @@ r.get('/', perms.requireAuth, (req, res) => {
       out.fees = settings.get('fees');
       out.payments = conn.prepare('SELECT * FROM payments ORDER BY created_at, rowid').all().map(S.payment);
     } else {
-      out.payments = conn.prepare('SELECT * FROM payments WHERE student_id = ? ORDER BY created_at, rowid').all(a.studentId).map(S.payment);
+      out.payments = conn.prepare("SELECT * FROM payments WHERE student_id = ? AND status != 'anulada' ORDER BY created_at, rowid").all(a.studentId).map(S.payment);
     }
     const since = a.studentRow.belt_since;
     out.classesSinceBelt = conn.prepare('SELECT COUNT(*) AS n FROM attendance WHERE student_id = ? AND date >= ?').get(a.studentId, since).n;

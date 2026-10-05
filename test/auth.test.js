@@ -107,20 +107,42 @@ test('cambio de contraseña: valida la actual, largo mínimo y cierra otras sesi
   await new Client(app.base).login('lucas.ferreyra', 'NuevaClave-99');
 });
 
-test('alumno nuevo: contraseña inicial = DNI, obligado a cambiarla antes de usar el sistema', async () => {
+test('alumno nuevo: contraseña inicial karatedo123; en el primer ingreso puede cambiarla o conservarla', async () => {
   const admin = new Client(app.base); await admin.login('sensei');
   const created = await admin.post('/api/students', { name: 'Tomás Prueba', group: 'adulto', belt: 'adulto-blanco', dojo: 'central', dni: '40123456' });
   assert.equal(created.status, 201);
   assert.equal(created.data.username, 'tomas.prueba');
+  assert.equal(created.data.initialPassword, 'karatedo123');
+  assert.equal((await new Client(app.base).post('/api/auth/login', { username: 'tomas.prueba', password: '40123456' })).status, 401, 'el DNI ya no es la clave');
+  // opción A: cambiarla
   const st = new Client(app.base);
-  const login = await st.post('/api/auth/login', { username: 'tomas.prueba', password: '40123456' });
+  const login = await st.post('/api/auth/login', { username: 'tomas.prueba', password: 'karatedo123' });
   assert.equal(login.status, 200);
   assert.equal(login.data.mustChangePassword, true);
   const blocked = await st.get('/api/bootstrap');
   assert.equal(blocked.status, 403);
   assert.equal(blocked.data.code, 'must_change_password');
-  assert.equal((await st.post('/api/auth/change-password', { current: '40123456', next: 'MiClaveNueva-1' })).status, 200);
+  assert.equal((await st.post('/api/auth/change-password', { current: 'karatedo123', next: 'MiClaveNueva-1' })).status, 200);
   assert.equal((await st.get('/api/bootstrap')).status, 200);
+  // opción B: conservarla
+  const b = await admin.post('/api/students', { name: 'Ana Conserva', group: 'adulto', belt: 'adulto-blanco', dojo: 'central' });
+  const keep = new Client(app.base);
+  await keep.post('/api/auth/login', { username: b.data.username, password: 'karatedo123' });
+  assert.equal((await keep.get('/api/bootstrap')).status, 403);
+  assert.equal((await keep.post('/api/auth/keep-password', {})).status, 200);
+  assert.equal((await keep.get('/api/bootstrap')).status, 200);
+  // el Sensei no puede conservar una clave inicial
+  const cfg = await new Client(app.base).post('/api/auth/login', { username: 'sensei', password: 'demo1234' });
+  assert.equal(cfg.data.mustChangePassword, false); // la de demo ya está elegida
+});
+
+test('restablecer clave: vuelve a karatedo123 y se vuelve a ofrecer cambiar o conservar', async () => {
+  const admin = new Client(app.base); await admin.login('sensei');
+  const id = (await admin.get('/api/bootstrap')).data.students.find(s => s.username === 'lucas.ferreyra').id;
+  const r = await admin.post(`/api/students/${id}/reset-password`, {});
+  assert.equal(r.data.password, 'karatedo123');
+  const login = await new Client(app.base).post('/api/auth/login', { username: 'lucas.ferreyra', password: 'karatedo123' });
+  assert.equal(login.data.mustChangePassword, true);
 });
 
 test('usuarios únicos: dos alumnos con el mismo nombre reciben IDs y usuarios distintos', async () => {
