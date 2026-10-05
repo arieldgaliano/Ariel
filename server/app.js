@@ -121,6 +121,7 @@ function createApp() {
   api.use('/settings', require('./routes/settings'));
   api.use('/files', require('./routes/files'));
   api.use('/backup', require('./routes/backup'));
+  api.use('/reports', require('./routes/reports'));
   api.use((req, _res, next) => next(new ApiError(404, 'No existe esa dirección.')));
   api.use(errorHandler);
   app.use('/api', api);
@@ -128,6 +129,8 @@ function createApp() {
   // Archivos subidos (fotos, logo, comprobantes) con control de acceso.
   app.use('/files', authenticate, require('./routes/file-serve'), errorHandler);
 
+  // El servicio de la app instalable no se guarda en caché, para que las actualizaciones lleguen enseguida.
+  app.get('/sw.js', (_req, res) => { res.set({ 'Cache-Control': 'no-cache', 'Content-Type': 'text/javascript; charset=utf-8' }); res.sendFile(path.join(config.publicDir, 'sw.js')); });
   app.use(express.static(config.publicDir, { maxAge: config.isProd ? '1h' : 0, index: 'index.html' }));
   app.use(errorHandler);
   return app;

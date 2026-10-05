@@ -261,3 +261,12 @@ test('registro de asistencia por QR: solo alumnos, con el código vigente, una v
   assert.notEqual(next, token);
   assert.equal((await sofia.post('/api/attendance/checkin', { token })).status, 400);
 });
+
+test('colores del sitio: no se guarda una combinación ilegible', async () => {
+  const theme = { paper: '#E8E0C4', paperRaised: '#F4EEDB', sumi: '#1C1613', ink: '#211B17', inkSoft: '#6B5A42', link: '#8E241D', btnBg: '#AC2B22', btnText: '#FFFFFF' };
+  assert.equal((await admin.put('/api/settings/theme', theme)).status, 200);
+  const bad = await admin.put('/api/settings/theme', { ...theme, ink: '#E0D8BC' }); // letra casi igual al fondo
+  assert.equal(bad.status, 400);
+  assert.match(bad.data.error, /ilegible/);
+  assert.equal((await admin.put('/api/settings/theme', { ...theme, btnText: '#AC2B22' })).status, 400);
+});

@@ -15,6 +15,13 @@ El prototipo original está en `prototipo/dojo.html` (solo de referencia).
    (si no las definís, genera una contraseña y la muestra **una sola vez** en la terminal).
 4. `npm start` y abrí http://localhost:3000
 
+## Instalarla como app en el celular
+Abrí el sitio en el celular: en Android aparece "Instalar la app" en el menú (o en el menú del navegador → "Instalar aplicación");
+en iPhone, con Safari: Compartir → "Agregar a pantalla de inicio". Queda con su ícono y abre como una app (los datos siempre se piden en línea).
+
+## Reportes
+Menú **Reportes** (solo Sensei): ingresos y gastos por mes, asistencia, cuotas sin cobrar, qué se cobró y alumnos por dojo, en gráficos o en tabla, con exportación.
+
 ## Cargar tus alumnos reales de una vez
 Alumnos → **Importar planilla**: descargá el modelo, completalo en Excel o Google Sheets, guardalo como CSV y subilo.
 Solo son obligatorios Nombre, Grupo (Adulto/Infantil) y Dojo. Las filas con errores se te informan para corregirlas; los alumnos

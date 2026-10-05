@@ -362,6 +362,7 @@ const adminNav = [
   {id:'asistencia', label:'Asistencia', group:'Gestión diaria'},
   {id:'pagos', label:'Cuotas y pagos', group:'Gestión diaria'},
   {id:'alquiler', label:'Gastos', group:'Gestión diaria'},
+  {id:'reportes', label:'Reportes', group:'Gestión diaria'},
   {id:'programas', label:'Programas', group:'Enseñanza'},
   {id:'cinturones', label:'Cinturones', group:'Enseñanza'},
   {id:'cronograma', label:'Cronograma y actividades', group:'Enseñanza'},
@@ -412,6 +413,7 @@ function renderShell(){
     <div class="nav-scroll">${nav.map((n,i)=>`${n.group && n.group!==(nav[i-1]||{}).group ? `<div class="nav-group">${n.group}</div>` : ''}<div class="nav-item ${i===0?'active':''}" data-nav="${n.id}" onclick="showPanel('${n.id}', this)">${n.label}</div>`).join('')}</div>
     <div class="sidebar-foot">
       <div class="who">${who.name}<small>${who.sub}</small></div>
+      <button class="logout-link" id="install-btn" onclick="installApp()" style="display:none">📲 Instalar la app</button>
       <button class="logout-link" onclick="openChangePasswordModal()">Cambiar contraseña</button>
       <button class="logout-link" onclick="logout()">Cerrar sesión</button>
     </div>
@@ -419,10 +421,11 @@ function renderShell(){
 
   const main = document.getElementById('main');
   main.innerHTML = '<button class="back-menu-btn" onclick="goHome()">‹ Menú principal</button>' + nav.map(n=>`<div class="panel" id="panel-${n.id}"></div>`).join('');
-  nav.forEach(n=>renderPanel(n.id));
+  nav.forEach(n=>{ if(n.id==='reportes') return; renderPanel(n.id); }); // Reportes se carga al abrirlo
   document.getElementById('panel-'+nav[0].id).classList.add('active');
   updateFab();
   adjustMainOffset();
+  updateInstallLink();
 }
 function adjustMainOffset(){
   const sidebar = document.getElementById('sidebar');
@@ -450,12 +453,13 @@ function showPanel(id, el){
   document.getElementById('panel-'+id).classList.add('active');
   if(id==='asistencia') renderAsistenciaPanel();
   if(id==='diplomas') renderDiplomasPanel();
+  if(id==='reportes') renderReportes();
 }
 function renderPanel(id){
   const map = {
     'resumen': renderResumen, 'alumnos': renderAlumnos, 'pagos': renderPagos,
     'asistencia': renderAsistenciaPanel, 'programas': renderProgramasAdmin,
-    'cinturones': renderCinturones, 'cronograma': renderCronograma, 'alquiler': renderAlquiler,
+    'cinturones': renderCinturones, 'cronograma': renderCronograma, 'alquiler': renderAlquiler, 'reportes': renderReportes,
     'inscripcion': renderInscripcionAdmin, 'configuracion': renderConfiguracion, 'diplomas': renderDiplomasPanel,
     'biblioteca': renderBiblioteca, 'foro': renderForo,
     'mi-programa': renderMiPrograma, 'mis-cuotas': renderMisCuotas, 'mi-asistencia': renderMiAsistencia,
@@ -2809,10 +2813,33 @@ function colorFieldRow(key, label){
   return `<div class="field">
     <label>${label}</label>
     <div style="display:flex;align-items:center;gap:10px;">
-      <input type="color" id="theme-${key}" value="${themeColors[key]}" oninput="document.getElementById('theme-${key}-hex').textContent=this.value" style="width:44px;height:36px;padding:2px;border:1px solid var(--rule);border-radius:var(--radius);background:var(--paper-raised);cursor:pointer;">
+      <input type="color" id="theme-${key}" value="${themeColors[key]}" oninput="document.getElementById('theme-${key}-hex').textContent=this.value;updateThemeContrast()" style="width:44px;height:36px;padding:2px;border:1px solid var(--rule);border-radius:var(--radius);background:var(--paper-raised);cursor:pointer;">
       <span id="theme-${key}-hex" style="font-size:12px;color:var(--ink-soft);">${themeColors[key]}</span>
     </div>
   </div>`;
+}
+// Contraste (WCAG) entre letra y fondo, para avisar cuando una combinación se lee mal.
+function lumOf(hex){
+  const c = [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(v=>v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4));
+  return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2];
+}
+function contrastRatio(a, b){ const [x,y] = [lumOf(a),lumOf(b)].sort((p,q)=>q-p); return (x+0.05)/(y+0.05); }
+function updateThemeContrast(){
+  const box = document.getElementById('theme-contrast');
+  if(!box) return;
+  const t = {};
+  Object.keys(themeColors).forEach(k=>{ t[k] = document.getElementById('theme-'+k).value; });
+  const pairs = [
+    ['Texto principal sobre el fondo', t.ink, t.paper], ['Texto principal sobre tarjetas', t.ink, t.paperRaised],
+    ['Texto secundario sobre el fondo', t.inkSoft, t.paper], ['Texto secundario sobre tarjetas', t.inkSoft, t.paperRaised],
+    ['Enlaces sobre el fondo', t.link, t.paper], ['Enlaces sobre tarjetas', t.link, t.paperRaised],
+    ['Letra de los botones', t.btnText, t.btnBg], ['Texto del menú lateral', '#B8A996', t.sumi],
+  ];
+  box.innerHTML = pairs.map(([label,a,b])=>{
+    const r = contrastRatio(a,b);
+    const [icon,cls,msg] = r>=4.5 ? ['✓','tag-ok','se lee bien'] : (r>=3 ? ['!','tag-warn','se lee con dificultad'] : ['✕','tag-bad','ilegible: no se puede guardar']);
+    return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:5px 0;font-size:13px;"><span>${esc(label)}</span><span class="tag ${cls}" style="margin:0">${icon} ${r.toFixed(1)}:1 · ${msg}</span></div>`;
+  }).join('');
 }
 async function saveThemeColors(){
   const body = {};
@@ -2856,6 +2883,7 @@ async function saveLetterhead(){
   toast('Membrete actualizado.');
 }
 function renderConfiguracion(){
+  setTimeout(updateThemeContrast, 0);
   document.getElementById('panel-configuracion').innerHTML = `
     <div class="main-head"><div><h1>Configuración</h1><p>Logo de la escuela y valores por defecto de cuotas, mesas y cinturones.</p></div></div>
 
@@ -2889,6 +2917,9 @@ function renderConfiguracion(){
         ${colorFieldRow('btnBg','Fondo de los botones')}
         ${colorFieldRow('btnText','Letra de los botones')}
       </div>
+      <p style="font-size:12.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 4px;">¿Se lee bien?</p>
+      <div id="theme-contrast"></div>
+      <p class="hint" style="margin-top:6px;">Lo ideal es 4,5:1 o más. Por debajo de 3:1 el texto casi no se ve y el sistema no deja guardar esos colores.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
         <button class="btn btn-dark" onclick="saveThemeColors()">Guardar colores</button>
         <button class="btn" onclick="resetThemeColors()">Restablecer colores originales</button>
@@ -4115,6 +4146,169 @@ async function renderVerifyScreen(code){
 }
 window.addEventListener('hashchange', route);
 
+/* ============================================================
+   ADMIN · REPORTES (gráficos hechos a medida, sin librerías)
+   Colores validados: azul y naranja se distinguen incluso con daltonismo y
+   superan 3:1 sobre el fondo de las tarjetas. Los textos nunca usan el color de la serie.
+============================================================ */
+const CHART_COLORS = {ingresos:'#2a78d6', gastos:'#d95926', deuda:'#7A5A1F', asistencia:'#4a3aa7'};
+let reportData = null, reportMonths = 12, reportView = 'graficos';
+const chartRegistry = {};
+const shortMonth = ym=>{
+  const [y,m] = ym.split('-').map(Number);
+  const name = new Date(y,m-1,1).toLocaleDateString('es-AR',{month:'short'}).replace('.','');
+  return m===1 ? `${name} ${String(y).slice(2)}` : name;
+};
+function niceMax(v){
+  if(v<=0) return 1;
+  const pow = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v/pow;
+  return (n<=1 ? 1 : n<=2 ? 2 : n<=2.5 ? 2.5 : n<=5 ? 5 : 10) * pow;
+}
+function fmtCompact(n, money){
+  const a = Math.abs(n);
+  const body = a>=1e6 ? (n/1e6).toLocaleString('es-AR',{maximumFractionDigits:1})+' M' : a>=1e3 ? (n/1e3).toLocaleString('es-AR',{maximumFractionDigits:1})+' mil' : String(Math.round(n));
+  return (money ? '$' : '') + body;
+}
+function barPath(x, y, w, h, r){
+  r = Math.min(r, w/2, h);               // esquinas de 4px solo en la punta; la base queda recta
+  return `M${x},${y+h} V${y+r} Q${x},${y} ${x+r},${y} H${x+w-r} Q${x+w},${y} ${x+w},${y+r} V${y+h} Z`;
+}
+// Gráfico de columnas agrupadas. series: [{name,color,values}]
+function columnChartHtml({id, title, subtitle, labels, series, money, tipLabel}){
+  chartRegistry[id] = {labels, series, money, tipLabel};
+  const legend = series.length>1 ? `<div class="chart-legend">${series.map(se=>`<span><i style="background:${se.color}"></i>${esc(se.name)}</span>`).join('')}</div>` : '';
+  const total = series.map(se=>se.values.reduce((a,b)=>a+b,0));
+  const aria = `${title}. ${series.map((se,i)=>`${se.name}: ${fmtMoneyOrNum(total[i],money)} en total`).join('. ')}. Hay una vista de tabla con todos los valores.`;
+  return `<div class="chart-card" data-chart="${id}">
+    <div class="chart-head"><div><h3 class="serif">${esc(title)}</h3><p>${esc(subtitle||'')}</p></div></div>
+    ${legend}
+    <div class="chart-body" data-chart-body="${id}" role="img" aria-label="${esc(aria)}"></div>
+  </div>`;
+}
+const fmtMoneyOrNum = (v,money)=> money ? fmtMoney(v) : Number(v).toLocaleString('es-AR');
+function drawColumnChart(id){
+  const reg = chartRegistry[id], body = document.querySelector(`[data-chart-body="${id}"]`);
+  if(!reg || !body) return;
+  const W = Math.max(300, body.clientWidth), H = 250, L = 56, R = 8, T = 12, B = 28;
+  const {labels, series, money} = reg;
+  const n = labels.length, k = series.length;
+  const max = niceMax(Math.max(0, ...series.flatMap(se=>se.values)));
+  const plotW = W-L-R, plotH = H-T-B, slot = plotW/n;
+  const y = v=>T + plotH - (v/max)*plotH;
+  const gap = 2;
+  const bw = Math.max(3, Math.min(24, (slot*0.78 - gap*(k-1))/k));
+  const groupW = k*bw + (k-1)*gap;
+  const every = slot<34 ? 3 : slot<46 ? 2 : 1;
+  const ticks = [0,1,2,3,4].map(i=>max*i/4);
+  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">`;
+  ticks.forEach(t=>{
+    svg += `<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--rule)" stroke-width="1"/>`;
+    svg += `<text x="${L-8}" y="${y(t)+4}" text-anchor="end" font-size="11.5" fill="var(--ink-soft)">${fmtCompact(t, money)}</text>`;
+  });
+  labels.forEach((lb,i)=>{
+    const cx = L + slot*i + slot/2;
+    if(i%every===0 || i===n-1 && every===1) svg += `<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="11.5" fill="var(--ink-soft)">${esc(shortMonth(lb))}</text>`;
+    series.forEach((se,j)=>{
+      const v = se.values[i], h = (v/max)*plotH;
+      if(v>0) svg += `<path d="${barPath(cx-groupW/2 + j*(bw+gap), y(v), bw, h, 4)}" fill="${se.color}"/>`;
+    });
+    svg += `<rect class="chart-hit" data-chart="${id}" data-i="${i}" x="${L+slot*i}" y="${T}" width="${slot}" height="${plotH+B}" fill="transparent"/>`;
+  });
+  svg += `<rect class="chart-hl" x="0" y="${T}" width="${slot}" height="${plotH}" fill="rgba(33,27,23,.07)" style="display:none;pointer-events:none"/></svg>`;
+  body.innerHTML = svg;
+}
+function showChartTip(e){
+  const hit = e.target.closest && e.target.closest('.chart-hit');
+  const tip = document.getElementById('chart-tip');
+  if(!hit){ tip.style.display = 'none'; document.querySelectorAll('.chart-hl').forEach(h=>h.style.display='none'); return; }
+  const reg = chartRegistry[hit.dataset.chart], i = +hit.dataset.i;
+  const hl = hit.parentNode.querySelector('.chart-hl');
+  hl.setAttribute('x', hit.getAttribute('x')); hl.style.display = '';
+  tip.innerHTML = `<strong>${esc(monthLabel(reg.labels[i]))}</strong>` + reg.series.map(se=>`<div><i style="background:${se.color}"></i>${esc(se.name)}<b>${fmtMoneyOrNum(se.values[i], reg.money)}</b></div>`).join('')
+    + (reg.tipLabel && reg.tipLabel[i] ? `<div class="muted">${esc(reg.tipLabel[i])}</div>` : '');
+  tip.style.display = 'block';
+  const r = tip.getBoundingClientRect();
+  const px = e.clientX, py = e.clientY;
+  tip.style.left = Math.max(8, Math.min(window.innerWidth - r.width - 8, px + 14)) + 'px';
+  tip.style.top = Math.max(8, py - r.height - 12 < 8 ? py + 16 : py - r.height - 12) + 'px';
+}
+document.addEventListener('pointermove', showChartTip);
+document.addEventListener('pointerdown', showChartTip);
+let chartResizeTimer;
+window.addEventListener('resize', ()=>{ clearTimeout(chartResizeTimer); chartResizeTimer = setTimeout(()=>{ if(reportData && reportView==='graficos') Object.keys(chartRegistry).forEach(drawColumnChart); }, 150); });
+
+async function renderReportes(){
+  const panel = document.getElementById('panel-reportes');
+  if(!panel) return;
+  if(!reportData) panel.innerHTML = '<div class="loading-note">Preparando los reportes…</div>';
+  reportData = await api('GET', '/reports/summary?months=' + reportMonths);
+  paintReportes();
+}
+function reportRows(){
+  const d = reportData;
+  return d.months.map((m,i)=>[monthLabel(m), d.income[i], d.expenses[i], d.income[i]-d.expenses[i], d.pending[i], d.attendance[i], d.classes[i], d.newStudents[i]]);
+}
+function paintReportes(){
+  const d = reportData;
+  const sum = a=>a.reduce((x,y)=>x+y,0);
+  const inc = sum(d.income), exp = sum(d.expenses), res = inc-exp;
+  const adultosInf = g=>d.active.filter(a=>a.grp===g).reduce((x,y)=>x+y.n,0);
+  const tiles = `
+    <div class="cards-row">
+      <div class="stat-card"><div class="num">${fmtMoney(inc)}</div><div class="lbl">Ingresos cobrados</div></div>
+      <div class="stat-card"><div class="num">${fmtMoney(exp)}</div><div class="lbl">Gastos pagados</div></div>
+      <div class="stat-card" style="border-top-color:${res>=0?'var(--ok)':'var(--shu)'}"><div class="num" style="color:${res>=0?'var(--ok)':'var(--shu-deep)'};white-space:nowrap">${res>=0?'▲ +':'▼ −'}${fmtMoney(Math.abs(res))}</div><div class="lbl">${res>=0?'Ganancia':'Pérdida'} del período</div></div>
+      <div class="stat-card"><div class="num">${fmtMoney(d.debt.total)}</div><div class="lbl">A cobrar hoy · ${d.debt.students} alumno${d.debt.students===1?'':'s'}</div></div>
+    </div>`;
+  const maxTipo = Math.max(1, ...d.byTipo.map(x=>x.total)), totalTipo = sum(d.byTipo.map(x=>x.total));
+  const tipoHtml = d.byTipo.length ? d.byTipo.map(x=>`
+    <div class="hbar"><div class="hbar-top"><span>${esc(x.label)}</span><span><b>${fmtMoney(x.total)}</b> <em>${Math.round(x.total/totalTipo*100)}%</em></span></div>
+    <div class="hbar-track"><div class="hbar-fill" style="width:${Math.max(2,x.total/maxTipo*100)}%;background:${CHART_COLORS.ingresos}"></div></div></div>`).join('') : '<p class="hint" style="margin:0">Todavía no hay cobros en este período.</p>';
+  const dojos = [...new Set(d.active.map(a=>a.dojo))];
+  const activeHtml = `<div class="cards-row">${dojos.map(dj=>{
+    const ad = d.active.find(a=>a.dojo===dj && a.grp==='adulto'), inf = d.active.find(a=>a.dojo===dj && a.grp==='infantil');
+    return `<div class="stat-card"><div class="num">${(ad?ad.n:0)+(inf?inf.n:0)}</div><div class="lbl">${esc(dj)} · ${ad?ad.n:0} adultos · ${inf?inf.n:0} infantiles</div></div>`;
+  }).join('')}<div class="stat-card"><div class="num">${adultosInf('adulto')+adultosInf('infantil')}</div><div class="lbl">Alumnos activos en total</div></div>
+    <div class="stat-card"><div class="num">${sum(d.newStudents)}</div><div class="lbl">Altas en el período</div></div></div>`;
+
+  const rows = reportRows();
+  const tableHtml = `<div class="table-wrap"><table><thead><tr><th>Mes</th><th>Ingresos</th><th>Gastos</th><th>Resultado</th><th>A cobrar</th><th>Presentes</th><th>Clases</th><th>Altas</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${fmtMoney(r[1])}</td><td>${fmtMoney(r[2])}</td><td>${r[3]<0?'−':''}${fmtMoney(Math.abs(r[3]))}</td><td>${fmtMoney(r[4])}</td><td>${r[5]}</td><td>${r[6]}</td><td>${r[7]}</td></tr>`).join('')}
+    <tr style="font-weight:700"><td>Total</td><td>${fmtMoney(inc)}</td><td>${fmtMoney(exp)}</td><td>${res<0?'−':''}${fmtMoney(Math.abs(res))}</td><td>—</td><td>${sum(d.attendance)}</td><td>${sum(d.classes)}</td><td>${sum(d.newStudents)}</td></tr></tbody></table></div>`;
+
+  document.getElementById('panel-reportes').innerHTML = `
+    <div class="main-head"><div><h1>Reportes</h1><p>Cómo viene el dojo mes a mes: plata, asistencia y alumnos.</p></div>
+      <button class="btn" onclick="exportReport()">Exportar / Descargar</button></div>
+    <div class="toolbar"><div class="filters">
+      <select onchange="reportMonths=+this.value;renderReportes();">${[[6,'Últimos 6 meses'],[12,'Últimos 12 meses'],[24,'Últimos 24 meses']].map(([v,l])=>`<option value="${v}" ${reportMonths===v?'selected':''}>${l}</option>`).join('')}</select>
+      <div class="subtabs" style="margin:0"><button class="${reportView==='graficos'?'active':''}" onclick="reportView='graficos';paintReportes()">Gráficos</button><button class="${reportView==='tabla'?'active':''}" onclick="reportView='tabla';paintReportes()">Tabla</button></div>
+    </div></div>
+    ${tiles}
+    ${reportView==='tabla' ? tableHtml : `
+      <div class="chart-grid">
+        ${columnChartHtml({id:'ing-gas', title:'Ingresos y gastos por mes', subtitle:'Lo cobrado y lo pagado, según la fecha de pago.', labels:d.months, money:true,
+          series:[{name:'Ingresos', color:CHART_COLORS.ingresos, values:d.income},{name:'Gastos', color:CHART_COLORS.gastos, values:d.expenses}]})}
+        ${columnChartHtml({id:'asist', title:'Asistencia por mes', subtitle:'Presentes registrados en total (cada alumno en cada clase).', labels:d.months,
+          series:[{name:'Presentes', color:CHART_COLORS.asistencia, values:d.attendance}], tipLabel:d.classes.map(c=>c+' clase'+(c===1?'':'s')+' registrada'+(c===1?'':'s'))})}
+        ${columnChartHtml({id:'deuda', title:'Cuotas sin cobrar por mes', subtitle:'Lo que quedó pendiente (o con comprobante en revisión) de cada mes.', labels:d.months, money:true,
+          series:[{name:'Pendiente', color:CHART_COLORS.deuda, values:d.pending}]})}
+        <div class="chart-card"><div class="chart-head"><div><h3 class="serif">Qué se cobró</h3><p>Ingresos del período por tipo de concepto.</p></div></div>${tipoHtml}</div>
+      </div>
+      <h3 class="serif" style="font-size:15px;margin:24px 0 10px;">Alumnos</h3>${activeHtml}`}
+  `;
+  if(reportView==='graficos') Object.keys(chartRegistry).forEach(drawColumnChart);
+}
+function exportReport(){
+  const label = `Últimos ${reportMonths} meses`;
+  openExportModal({
+    title:'Reporte mensual', periodLabel:label,
+    headers:['Mes','Ingresos','Gastos','Resultado','A cobrar','Presentes','Clases','Altas'],
+    rows: reportRows().map(r=>[r[0], fmtMoney(r[1]), fmtMoney(r[2]), (r[3]<0?'−':'')+fmtMoney(Math.abs(r[3])), fmtMoney(r[4]), r[5], r[6], r[7]]),
+    filenameBase:'reporte_mensual',
+  });
+}
+
 /* En pantallas chicas las tablas se muestran como tarjetas: cada celda lleva el nombre de su columna. */
 function labelTables(){
   document.querySelectorAll('.table-wrap table:not(.sheet-table)').forEach(t=>{
@@ -4128,6 +4322,31 @@ function labelTables(){
 let labelQueued = false;
 new MutationObserver(()=>{ if(labelQueued) return; labelQueued = true; requestAnimationFrame(()=>{ labelQueued = false; labelTables(); }); })
   .observe(document.body, {childList:true, subtree:true});
+
+/* ============================================================
+   APP INSTALABLE (ícono en la pantalla de inicio, abre como una app)
+============================================================ */
+let installEvent = null;
+const isStandalone = ()=>window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIos = ()=>/iphone|ipad|ipod/i.test(navigator.userAgent);
+function updateInstallLink(){
+  const btn = document.getElementById('install-btn');
+  if(btn) btn.style.display = (!isStandalone() && (installEvent || isIos())) ? '' : 'none';
+}
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); installEvent = e; updateInstallLink(); });
+window.addEventListener('appinstalled', ()=>{ installEvent = null; updateInstallLink(); toast('¡App instalada! La encontrás en tu pantalla de inicio.'); });
+async function installApp(){
+  if(installEvent){ installEvent.prompt(); await installEvent.userChoice; installEvent = null; updateInstallLink(); return; }
+  showModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 class="serif">Instalar la app</h3>
+    ${isIos() ? `<ol style="font-size:14px;line-height:1.9;padding-left:20px;margin-top:0">
+      <li>Abrí esta página con <strong>Safari</strong>.</li><li>Tocá el botón <strong>Compartir</strong> (el cuadrado con la flecha hacia arriba).</li>
+      <li>Elegí <strong>"Agregar a pantalla de inicio"</strong>.</li><li>Tocá <strong>Agregar</strong>.</li></ol>`
+    : `<p style="font-size:14px;line-height:1.7;margin-top:0">Abrí el menú del navegador (los tres puntitos) y elegí <strong>"Instalar aplicación"</strong> o <strong>"Agregar a pantalla de inicio"</strong>.</p>`}
+    <div class="modal-actions"><button class="btn btn-dark" onclick="closeModal()">Entendido</button></div>`);
+}
+if('serviceWorker' in navigator) window.addEventListener('load', ()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 
 /* ============================================================
    ARRANQUE

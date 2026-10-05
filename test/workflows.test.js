@@ -320,3 +320,36 @@ test('respaldo por correo: solo el Sensei; la clave se guarda encriptada y nunca
   const swapped = await admin.put('/api/backup/email', { ...body, enabled: false, pass: '', user: 'otra@x.com' });
   assert.equal(swapped.data.backupEmail.hasPassword, false, 'al cambiar de cuenta se pide la clave de nuevo');
 });
+
+test('reportes: totales por mes coherentes con los pagos y gastos; solo el Sensei', async () => {
+  admin = await as('sensei');
+  assert.equal((await as('ivan.castro').then(c => c.get('/api/reports/summary'))).status, 403);
+  assert.equal((await admin.get('/api/reports/summary?months=7')).status, 400);
+  const r = (await admin.get('/api/reports/summary?months=24')).data;
+  assert.equal(r.months.length, 24);
+  for (const k of ['income', 'expenses', 'pending', 'attendance', 'classes', 'newStudents']) assert.equal(r[k].length, 24, k);
+  const paidTotal = db.get().prepare("SELECT SUM(amount_cents) / 100.0 AS t FROM payments WHERE status = 'pagada' AND paid_on >= ?").get(r.months[0] + '-01').t;
+  assert.ok(Math.abs(r.income.reduce((a, b) => a + b, 0) - paidTotal) < 0.01);
+  assert.ok(Math.abs(r.byTipo.reduce((a, x) => a + x.total, 0) - paidTotal) < 0.01);
+  assert.ok(r.active.length > 0);
+  // un pago anulado deja de contar
+  const p = (await admin.get('/api/payments')).data.payments.find(x => x.status === 'pagada');
+  await admin.post(`/api/payments/${p.id}/void`, { reason: 'prueba' });
+  const after = (await admin.get('/api/reports/summary?months=24')).data;
+  assert.ok(after.income.reduce((a, b) => a + b, 0) <= r.income.reduce((a, b) => a + b, 0) - p.amount + 0.01);
+});
+
+test('app instalable: manifiesto, íconos y servicio disponibles; el servicio no cachea datos', async () => {
+  const anon = new Client(app.base);
+  const m = await anon.get('/manifest.webmanifest');
+  assert.equal(m.status, 200);
+  const man = Buffer.isBuffer(m.data) ? JSON.parse(m.data.toString()) : m.data; // el cliente de prueba ya lo lee como JSON
+  assert.equal(man.display, 'standalone');
+  for (const i of man.icons) assert.equal((await anon.get(i.src)).status, 200, i.src);
+  const sw = await anon.get('/sw.js');
+  assert.equal(sw.status, 200);
+  assert.match(sw.headers.get('cache-control'), /no-cache/);
+  const code = sw.data.toString();
+  assert.match(code, /startsWith\('\/api\/'\)/);
+  assert.match(code, /startsWith\('\/files\/'\)/);
+});

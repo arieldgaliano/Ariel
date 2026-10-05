@@ -7,6 +7,7 @@ const settings = require('../settings');
 const queries = require('../queries');
 const { v } = require('../validate');
 const { ApiError } = require('../util');
+const contrast = require('../contrast');
 
 const r = express.Router();
 r.use(perms.requireAdmin);
@@ -42,6 +43,9 @@ r.put('/theme', (req, res) => {
   const b = v.object(req.body);
   const next = {};
   for (const key of Object.keys(settings.DEFAULTS.theme)) next[key] = v.color(b[key], key);
+  // Nunca se guarda una combinación que deje el texto casi invisible (mínimo 3:1; lo recomendado es 4,5:1).
+  const bad = contrast.check(next).filter(c => c.ratio < 3);
+  if (bad.length) throw new ApiError(400, `Esos colores dejan ilegible: ${bad.map(b => b.label.toLowerCase()).join(', ')}. Elegí colores con más diferencia entre letra y fondo.`);
   settings.set('theme', next);
   res.json({ theme: settings.get('theme') });
 });
