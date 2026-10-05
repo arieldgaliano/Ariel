@@ -26,9 +26,11 @@ function studentFull(id) {
 
 function allStudentsFull() {
   const acts = activitiesByStudent();
+  const classes = new Map(q().prepare(`SELECT s.id, COUNT(a.date) AS n FROM students s
+                                       LEFT JOIN attendance a ON a.student_id = s.id AND a.date >= s.belt_since GROUP BY s.id`).all().map(r => [r.id, r.n]));
   const users = new Map(q().prepare('SELECT student_id, username FROM users WHERE student_id IS NOT NULL').all().map(u => [u.student_id, u.username]));
   return q().prepare('SELECT * FROM students ORDER BY name COLLATE NOCASE').all()
-    .map(r => S.student(r, { activities: acts.get(r.id) || [], username: users.get(r.id) || '' }));
+    .map(r => ({ ...S.student(r, { activities: acts.get(r.id) || [], username: users.get(r.id) || '' }), classesSinceBelt: classes.get(r.id) || 0 }));
 }
 
 function allBelts() {

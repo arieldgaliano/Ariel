@@ -145,6 +145,70 @@ r.put('/:id', (req, res) => {
   res.json({ student: queries.studentFull(id), usernameChanged });
 });
 
+// Importación masiva desde planilla (el navegador lee el CSV y manda las filas).
+const norm = t => String(t == null ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+function parseDateLoose(t) {
+  const x = String(t || '').trim();
+  if (!x) return null;
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(x);
+  if (!m) { const d = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/.exec(x); if (d) m = [0, d[3], d[2], d[1]]; }
+  if (!m) return undefined;
+  const iso = `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+  return Number.isNaN(new Date(iso + 'T00:00:00Z').getTime()) || new Date(iso + 'T00:00:00Z').toISOString().slice(0, 10) !== iso ? undefined : iso;
+}
+
+r.post('/import', async (req, res) => {
+  const rows = v.object(req.body).rows;
+  if (!Array.isArray(rows) || !rows.length) throw new ApiError(400, 'La planilla no tiene filas para importar.');
+  if (rows.length > 300) throw new ApiError(400, 'Importá hasta 300 alumnos por vez.');
+  const conn = db.get();
+  const dojos = conn.prepare('SELECT * FROM dojos').all();
+  const belts = conn.prepare('SELECT * FROM belts').all();
+  const existing = new Set(conn.prepare('SELECT name, birth FROM students').all().map(s => norm(s.name) + '|' + (s.birth || '')));
+  const plan = [], skipped = [];
+  rows.forEach((raw, i) => {
+    const line = i + 2; // la fila 1 de la planilla es el encabezado
+    try {
+      const b = v.object(raw);
+      const name = v.str(b.name, 'Nombre', { max: 120, required: true });
+      const group = norm(b.group).startsWith('inf') ? 'infantil' : 'adulto';
+      const dj = dojos.find(d => d.id === norm(b.dojo) || norm(d.name) === norm(b.dojo) || norm(d.name).includes(norm(b.dojo)) && norm(b.dojo));
+      if (!dj) throw new Error(`Dojo "${b.dojo || ''}" no reconocido (usá ${dojos.map(d => d.name).join(' o ')})`);
+      const wanted = norm(b.belt);
+      const belt = wanted ? belts.find(x => x.grp === group && (x.id === wanted || norm(x.name) === wanted)) : belts.find(x => x.id === `${group}-blanco`);
+      if (!belt) throw new Error(`Cinturón "${b.belt}" no existe en el grupo ${group}`);
+      const birth = parseDateLoose(b.birth), since = parseDateLoose(b.since);
+      if (birth === undefined) throw new Error('Fecha de nacimiento inválida (usá AAAA-MM-DD o DD/MM/AAAA)');
+      if (since === undefined) throw new Error('Fecha de ingreso inválida');
+      const key = norm(name) + '|' + (birth || '');
+      if (existing.has(key)) throw new Error('Ya existe un alumno con ese nombre y fecha de nacimiento');
+      existing.add(key);
+      plan.push({ name, group, dojo: dj.id, belt: belt.id, birth, since: since || todayIso(),
+        phone: v.str(b.phone, 'Teléfono', { max: 40 }), guardian: v.str(b.guardian, 'Tutor', { max: 120 }), dni: v.str(b.dni, 'DNI', { max: 20 }),
+        allergies: v.str(b.allergies, 'Alergias', { max: 1000 }), emergencyContact: v.str(b.emergencyContact, 'Contacto de emergencia', { max: 120 }),
+        emergencyPhone: v.str(b.emergencyPhone, 'Teléfono de emergencia', { max: 40 }), familyGroup: v.str(b.familyGroup, 'Grupo familiar', { max: 120 }) });
+    } catch (e) { skipped.push({ row: line, name: String((raw && raw.name) || ''), reason: e.message.replace(/^[^:]+: /, m => m) }); }
+  });
+  for (const p of plan) p.hash = await security.hashPassword(config.defaultStudentPassword); // cada uno con su sal
+  const createdIds = [];
+  db.tx(c => {
+    for (const p of plan) {
+      const id = uuid(), now = nowIso();
+      const username = uniqueUsername(p.name);
+      c.prepare(`INSERT INTO students (id, name, belt_id, joined_on, belt_since, birth, family_group, phone, guardian, grp, dojo_id, dni, allergies,
+                   emergency_contact, emergency_phone, enabled_modules, module_perms, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?)`)
+        .run(id, p.name, p.belt, p.since, p.since, p.birth, p.familyGroup, p.phone, p.guardian, p.group, p.dojo, p.dni, p.allergies,
+          p.emergencyContact, p.emergencyPhone, JSON.stringify(perms.DEFAULT_STUDENT_MODULES), now, now);
+      c.prepare('INSERT INTO users (id, username, password_hash, role, student_id, must_change_password, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)')
+        .run(uuid(), username, p.hash, 'student', id, now);
+      createdIds.push(id);
+    }
+  });
+  security.audit(req, 'students_imported', 'student', null, { created: createdIds.length, skipped: skipped.length });
+  res.status(201).json({ created: createdIds.length, students: createdIds.map(queries.studentFull), skipped, initialPassword: config.defaultStudentPassword });
+});
+
 r.post('/:id/status', (req, res) => {
   const id = v.id(req.params.id, 'Alumno');
   const status = v.oneOf(v.object(req.body).status, 'Estado', ['activo', 'suspendido']);

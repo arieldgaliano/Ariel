@@ -654,11 +654,34 @@ function renderResumen(){
         </tbody>
       </table>
     </div>
+    ${readyToExamHtml()}
     <h3 class="serif" style="font-size:15px;margin:24px 0 10px;">Próximos cumpleaños</h3>
     ${upcomingBirthdays().length ? `<div class="home-grid">${upcomingBirthdays().map(u=>`
       <div class="home-card">${avatarHtml(u.s,26)}<strong style="display:inline-block;margin-left:8px;">${esc(u.s.name)}</strong><div class="meta">${u.days===0?'¡Es hoy!':(u.days===1?'Mañana':'En '+u.days+' días')} · ${u.label}</div></div>
     `).join('')}</div>` : '<p style="color:var(--ink-soft);font-size:13.5px;">Nadie cumple años en los próximos 30 días.</p>'}
   `;
+}
+function monthsBetween(fromIso, toIso){
+  if(!fromIso || !toIso) return 0;
+  const [fy,fm,fd] = fromIso.split('-').map(Number), [ty,tm,td] = toIso.split('-').map(Number);
+  return Math.max(0, (ty-fy)*12 + (tm-fm) - (td<fd ? 1 : 0));
+}
+// Alumnos que ya cumplen el tiempo y las clases mínimas para el próximo cinturón.
+function readyToExam(){
+  return students.filter(s=>s.status==='activo' && s.classesSinceBelt!==undefined).map(s=>{
+    const list = beltsForGroup(s.group);
+    const next = list[list.findIndex(b=>b.id===s.belt)+1];
+    if(!next) return null;
+    const months = monthsBetween(s.beltSince, me.serverToday);
+    return (months>=next.minMonths && s.classesSinceBelt>=next.classesRequired) ? {s, next, months} : null;
+  }).filter(Boolean);
+}
+function readyToExamHtml(){
+  const ready = readyToExam();
+  return `<h3 class="serif" style="font-size:15px;margin:24px 0 10px;">Listos para rendir (${ready.length})</h3>` + (ready.length ? `<div class="home-grid">${ready.map(x=>`
+    <div class="home-card">${avatarHtml(x.s,26)}<strong style="display:inline-block;margin-left:8px;">${esc(x.s.name)}</strong>
+      <div class="meta">${esc(beltById(x.s.belt).name)} → ${esc(x.next.name)} · ${x.months} meses · ${x.s.classesSinceBelt} clases</div></div>`).join('')}</div>`
+    : '<p style="color:var(--ink-soft);font-size:13.5px;">Nadie cumple todavía el tiempo y las clases mínimas para el próximo cinturón.</p>');
 }
 function upcomingBirthdays(){
   const today = todayIso();
@@ -684,7 +707,10 @@ let alumnosFilter = {group:'', dojo:'', q:''};
 function renderAlumnos(){
   document.getElementById('panel-alumnos').innerHTML = `
     <div class="main-head"><div><h1>Alumnos</h1><p>Ficha, cinturón, grupo, dojo, beca e instructores.</p></div>
-      <button class="btn btn-dark" onclick="openStudentForm()">+ Nuevo alumno</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn" onclick="openImportStudents()">Importar planilla</button>
+        <button class="btn btn-dark" onclick="openStudentForm()">+ Nuevo alumno</button>
+      </div>
     </div>
     <div class="toolbar">
       <input class="search" placeholder="Buscar por nombre, teléfono, tutor, grupo o dojo…" oninput="alumnosFilter.q=this.value;paintAlumnos();">
@@ -710,6 +736,109 @@ function renderAlumnos(){
   `;
   paintAlumnos();
 }
+/* ---------- Importar alumnos desde una planilla (CSV) ---------- */
+const IMPORT_COLUMNS = [
+  ['name','Nombre','nombre|nombre y apellido|alumno|apellido y nombre'],
+  ['group','Grupo','grupo|categoria'],
+  ['dojo','Dojo','dojo|sede'],
+  ['belt','Cinturón','cinturon|grado'],
+  ['phone','Teléfono','telefono|celular|whatsapp'],
+  ['guardian','Tutor','tutor|responsable|padre/madre'],
+  ['birth','Nacimiento','nacimiento|fecha de nacimiento|fecha nac'],
+  ['since','Ingreso','ingreso|fecha de ingreso|en la escuela desde'],
+  ['dni','DNI','dni|documento'],
+  ['allergies','Alergias','alergias|ficha medica|condiciones medicas'],
+  ['emergencyContact','Contacto de emergencia','contacto de emergencia|emergencia'],
+  ['emergencyPhone','Teléfono de emergencia','telefono de emergencia|tel emergencia'],
+  ['familyGroup','Grupo familiar','grupo familiar|familia'],
+];
+function parseCsv(text){
+  text = text.replace(/^﻿/, '');
+  const first = text.split(/\r?\n/)[0] || '';
+  const delim = (first.match(/;/g)||[]).length > (first.match(/,/g)||[]).length ? ';' : ',';
+  const rows = []; let row = [], cell = '', q = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){ cell += '"'; i++; } else q = false; } else cell += c;
+    } else if(c==='"') q = true;
+    else if(c===delim){ row.push(cell); cell = ''; }
+    else if(c==='\n' || c==='\r'){ if(c==='\r' && text[i+1]==='\n') i++; row.push(cell); cell = ''; if(row.some(x=>x.trim()!=='')) rows.push(row); row = []; }
+    else cell += c;
+  }
+  row.push(cell); if(row.some(x=>x.trim()!=='')) rows.push(row);
+  return rows;
+}
+function downloadImportTemplate(){
+  downloadCsv('modelo_importar_alumnos.csv', IMPORT_COLUMNS.map(c=>c[1]), [
+    ['Juan Pérez','Adulto','Dojo Central','Blanco','5493415551234','','1990-05-20','2024-03-01','30111222','','',''  ,''],
+    ['Sofía López','Infantil','Dojo Norte','','5493415559999','Marta López','15/08/2016','','50222333','Asma','Marta López','5493415559999','Familia López'],
+  ]);
+}
+let importRows = [];
+function openImportStudents(){
+  importRows = [];
+  showModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 class="serif">Importar alumnos desde una planilla</h3>
+    <p class="hint" style="margin-top:0">Guardá tu planilla de Excel o Google Sheets como <strong>CSV</strong> (Archivo → Descargar/Guardar como → CSV). La primera fila tiene que tener los nombres de las columnas. Solo es obligatorio <strong>Nombre</strong>, <strong>Grupo</strong> (Adulto/Infantil) y <strong>Dojo</strong>.</p>
+    <button class="btn btn-sm" onclick="downloadImportTemplate()">Descargar modelo de planilla</button>
+    <div class="field" style="margin-top:14px"><label>Archivo CSV</label><input type="file" id="import-file" accept=".csv,text/csv" onchange="onImportFile(this)"></div>
+    <div id="import-preview"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-dark" id="import-go" onclick="confirmImportStudents()" disabled>Importar</button>
+    </div>
+  `);
+}
+function onImportFile(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const table = parseCsv(String(e.target.result));
+    const box = document.getElementById('import-preview');
+    if(table.length < 2){ box.innerHTML = '<p class="hint">El archivo no tiene filas de alumnos.</p>'; return; }
+    const norm = normalizeText;
+    const header = table[0].map(h=>norm(h).trim());
+    const colIndex = {};
+    IMPORT_COLUMNS.forEach(([key,,aliases])=>{
+      const names = aliases.split('|');
+      const i = header.findIndex(h=>names.includes(h));
+      if(i>=0) colIndex[key] = i;
+    });
+    if(colIndex.name===undefined){ box.innerHTML = '<p class="hint" style="color:var(--shu-deep)">No encontré la columna "Nombre". Revisá la primera fila de la planilla o usá el modelo.</p>'; return; }
+    importRows = table.slice(1).map(r=>{
+      const o = {}; Object.keys(colIndex).forEach(k=>{ o[k] = (r[colIndex[k]]||'').trim(); }); return o;
+    });
+    const missing = IMPORT_COLUMNS.filter(c=>colIndex[c[0]]===undefined).map(c=>c[1]);
+    box.innerHTML = `<p style="font-size:13.5px"><strong>${importRows.length}</strong> alumno${importRows.length===1?'':'s'} para importar.${missing.length ? ` <span class="hint">Columnas no encontradas (quedan vacías): ${esc(missing.join(', '))}.</span>` : ''}</p>
+      <div class="table-wrap" style="max-height:200px;overflow:auto"><table><thead><tr><th>Nombre</th><th>Grupo</th><th>Dojo</th><th>Cinturón</th></tr></thead><tbody>
+      ${importRows.slice(0,8).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.group||'')}</td><td>${esc(r.dojo||'')}</td><td>${esc(r.belt||'')}</td></tr>`).join('')}
+      ${importRows.length>8 ? `<tr><td colspan="4" class="hint">… y ${importRows.length-8} más</td></tr>` : ''}</tbody></table></div>`;
+    document.getElementById('import-go').disabled = false;
+  };
+  reader.readAsText(file, 'utf-8');
+}
+async function confirmImportStudents(){
+  const btn = document.getElementById('import-go');
+  btn.disabled = true; btn.textContent = 'Importando…';
+  let r;
+  try{ r = await api('POST', '/students/import', {rows: importRows}); }
+  catch(e){ btn.disabled = false; btn.textContent = 'Importar'; throw e; }
+  r.students.forEach(st=>upsertById(students, st));
+  paintAlumnos();
+  showModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 class="serif">Importación terminada</h3>
+    <p style="font-size:13.5px;line-height:1.6"><strong>${r.created}</strong> alumno${r.created===1?'':'s'} creado${r.created===1?'':'s'}. Contraseña inicial de todos: <strong>${esc(r.initialPassword)}</strong> (la primera vez eligen cambiarla o conservarla).</p>
+    ${r.skipped.length ? `<p style="font-size:13.5px"><strong>${r.skipped.length}</strong> fila${r.skipped.length===1?'':'s'} no se importó:</p>
+      <div class="row-menu" style="max-height:200px;overflow-y:auto;">${r.skipped.map(x=>`<div style="padding:8px 4px;border-bottom:1px solid var(--rule);font-size:13px;">Fila ${x.row}${x.name?' · '+esc(x.name):''}: ${esc(x.reason)}</div>`).join('')}</div>
+      <p class="hint">Corregí esas filas en la planilla y volvé a importar solo esas: los que ya se crearon no se duplican.</p>` : ''}
+    <div class="modal-actions"><button class="btn btn-dark" onclick="closeModal()">Listo</button></div>
+  `);
+}
+
 function avatarHtml(s, size){
   size = size || 28;
   if(s.photo) return `<img src="${esc(s.photo)}" alt="" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex-shrink:0;">`;
@@ -1492,6 +1621,7 @@ function renderPagos(){
   document.getElementById('panel-pagos').innerHTML = `
     <div class="main-head"><div><h1>Cuotas y pagos</h1><p>Cuotas, adelantos, mesas de examen y cinturones — con medio de pago y recibo.</p></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn" onclick="openDebtorsModal()">Avisar a deudores</button>
         ${currentRole==='admin' ? '<button class="btn" onclick="openGenerateMonthlyModal()">Generar cuotas del mes</button>' : ''}
         <button class="btn btn-dark" onclick="openNewPaymentModal()">+ Registrar pago</button>
       </div>
@@ -1632,6 +1762,39 @@ async function confirmProofPayment(paymentId){
   upsertById(payments, r.payment);
   paintPagos();
   openReceiptModal(paymentId, true);
+}
+function debtorGroups(){
+  const by = new Map();
+  payments.filter(p=>p.status==='pendiente').forEach(p=>{
+    const st = students.find(x=>x.id===p.studentId);
+    if(!st || st.status!=='activo') return;
+    if(!by.has(st.id)) by.set(st.id, {s:st, items:[], total:0});
+    const g = by.get(st.id); g.items.push(p); g.total += p.amount;
+  });
+  return [...by.values()].sort((a,b)=>a.s.name.localeCompare(b.s.name,'es'));
+}
+function debtorMessage(g){
+  const first = (g.s.guardian || g.s.name).split(' ')[0];
+  const lines = g.items.map(p=>`• ${p.concept} (${p.period}): ${fmtMoney(p.amount)}`).join('\n');
+  return `Hola ${first}! Te escribimos de ${letterheadConfig.dojoName}. Recordamos que ${g.s.name} tiene pendiente:\n${lines}\nTotal: ${fmtMoney(g.total)}.\nCualquier duda, avisanos. ¡Gracias!`;
+}
+function openDebtorsModal(){
+  const groups = debtorGroups();
+  showModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 class="serif">Avisar a deudores</h3>
+    <p class="hint" style="margin-top:0">Abre WhatsApp con el mensaje ya escrito para cada alumno con cuotas pendientes. Vos decidís cuándo enviarlo.</p>
+    <div class="row-menu" style="max-height:340px;overflow-y:auto;">
+      ${groups.length ? groups.map(g=>{
+        const phone = String(g.s.phone||'').replace(/\D/g,'');
+        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--rule);font-size:13.5px;">
+          <div><strong>${esc(g.s.name)}</strong><div class="hint" style="margin:2px 0 0">${g.items.length} pendiente${g.items.length===1?'':'s'} · ${fmtMoney(g.total)}${phone?'':' · sin teléfono'}</div></div>
+          ${phone ? `<a class="btn btn-sm btn-dark" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/${phone}?text=${encodeURIComponent(debtorMessage(g))}">WhatsApp</a>` : ''}
+        </div>`;
+      }).join('') : '<p style="padding:14px 4px;color:var(--ink-soft)">No hay cuotas pendientes. ¡Todos al día!</p>'}
+    </div>
+    <div class="modal-actions"><button class="btn btn-dark" onclick="closeModal()">Cerrar</button></div>
+  `);
 }
 function openGenerateMonthlyModal(){
   const cm = me.serverToday.slice(0,7);
@@ -2476,7 +2639,7 @@ function paintExpenses(){
       <td>${esc(e.date)}</td>
       <td>${fmtMoney(e.amount)}</td>
       <td>${e.status==='pagado' ? `<span class="tag tag-ok">Pagado · ${esc(e.paidOn)}</span>` : '<span class="tag tag-warn">Pendiente</span>'}</td>
-      <td>${e.status==='pendiente' ? `<button class="btn btn-sm btn-dark" onclick="openExpensePaymentModal('${e.id}')">Registrar pago</button>` : ''}</td>
+      <td>${e.status==='pendiente' ? `<button class="btn btn-sm btn-dark" onclick="openExpensePaymentModal('${e.id}')">Registrar pago</button>` : ''}<button class="btn-ghost" onclick="openEditExpense('${e.id}')">Editar</button><button class="btn-ghost danger" onclick="openDeleteExpense('${e.id}')">Eliminar</button></td>
     </tr>
   `).join('') : `<tr><td colspan="6" class="att-empty">No se encontraron resultados.</td></tr>`;
 }
@@ -2524,6 +2687,52 @@ async function saveNewExpense(){
   expenses.push(r.expense);
   closeModal(); paintExpenses();
   toast('Gasto registrado.');
+}
+function openEditExpense(id){
+  const e = expenses.find(x=>x.id===id);
+  showModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 class="serif">Editar gasto</h3>
+    <div class="field"><label>Categoría</label><select id="ee-category">${expenseCategories.map(c=>`<option ${c===e.category?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+    <div class="field"><label>Concepto / descripción</label><input type="text" id="ee-concept" value="${esc(e.concept)}"></div>
+    <div class="grid2">
+      <div class="field"><label>Monto</label><input type="text" id="ee-amount" value="${e.amount}"></div>
+      <div class="field"><label>Fecha</label><input type="date" id="ee-date" value="${esc(e.date)}"></div>
+    </div>
+    <div class="field"><label>Estado</label><select id="ee-status"><option value="pagado" ${e.status==='pagado'?'selected':''}>Pagado</option><option value="pendiente" ${e.status==='pendiente'?'selected':''}>Pendiente de pago</option></select></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-dark" onclick="saveEditExpense('${id}')">Guardar</button></div>
+  `);
+}
+async function saveEditExpense(id){
+  const concept = document.getElementById('ee-concept').value.trim();
+  const amount = parseFloat(String(document.getElementById('ee-amount').value).replace(',','.'));
+  if(!concept){ toast('Completá el concepto.'); return; }
+  if(!amount || amount<=0 || isNaN(amount)){ toast('El monto tiene que ser un número mayor a cero.'); return; }
+  const old = expenses.find(x=>x.id===id);
+  const status = document.getElementById('ee-status').value;
+  const r = await api('PUT', '/expenses/'+id, {
+    category: document.getElementById('ee-category').value, concept, amount, date: document.getElementById('ee-date').value,
+    status, paidOn: old.paidOn,
+  });
+  upsertById(expenses, r.expense);
+  closeModal(); paintExpenses();
+  toast('Gasto actualizado.');
+}
+function openDeleteExpense(id){
+  const e = expenses.find(x=>x.id===id);
+  showModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 class="serif">Eliminar gasto</h3>
+    <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;">Vas a eliminar <strong>${esc(e.concept)}</strong> (${fmtMoney(e.amount)}). Esta acción no se puede deshacer.</p>
+    <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-dark" style="background:var(--shu-deep);border-color:var(--shu-deep)" onclick="confirmDeleteExpense('${id}')">Eliminar definitivamente</button></div>
+  `);
+}
+async function confirmDeleteExpense(id){
+  await api('DELETE', '/expenses/'+id);
+  expenses = expenses.filter(x=>x.id!==id);
+  closeModal(); paintExpenses();
+  toast('Gasto eliminado.');
 }
 function openExpensePaymentModal(id){
   const e = expenses.find(x=>x.id===id);

@@ -27,6 +27,27 @@ r.post('/', (req, res) => {
   res.status(201).json({ expense: fresh(id) });
 });
 
+r.put('/:id', (req, res) => {
+  const id = v.id(req.params.id, 'Gasto');
+  if (!db.get().prepare('SELECT 1 FROM expenses WHERE id = ?').get(id)) throw new ApiError(404, 'Gasto no encontrado.');
+  const b = v.object(req.body);
+  const status = v.oneOf(b.status, 'Estado', ['pagado', 'pendiente']);
+  const date = v.date(b.date, 'Fecha', { required: true });
+  const paidOn = status === 'pagado' ? (v.date(b.paidOn, 'Fecha de pago') || date) : null;
+  db.get().prepare('UPDATE expenses SET category = ?, concept = ?, amount_cents = ?, date = ?, status = ?, paid_on = ? WHERE id = ?')
+    .run(v.oneOf(b.category, 'Categoría', CATEGORIES), v.str(b.concept, 'Concepto', { max: 200, required: true }),
+      toCents(v.money(b.amount, 'Monto')), date, status, paidOn, id);
+  security.audit(req, 'expense_updated', 'expense', id);
+  res.json({ expense: fresh(id) });
+});
+
+r.delete('/:id', (req, res) => {
+  const id = v.id(req.params.id, 'Gasto');
+  if (!db.get().prepare('DELETE FROM expenses WHERE id = ?').run(id).changes) throw new ApiError(404, 'Gasto no encontrado.');
+  security.audit(req, 'expense_deleted', 'expense', id);
+  res.json({ ok: true });
+});
+
 r.post('/:id/pay', (req, res) => {
   const id = v.id(req.params.id, 'Gasto');
   const cur = db.get().prepare('SELECT * FROM expenses WHERE id = ?').get(id);

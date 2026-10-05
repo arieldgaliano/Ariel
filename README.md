@@ -15,6 +15,11 @@ El prototipo original está en `prototipo/dojo.html` (solo de referencia).
    (si no las definís, genera una contraseña y la muestra **una sola vez** en la terminal).
 4. `npm start` y abrí http://localhost:3000
 
+## Cargar tus alumnos reales de una vez
+Alumnos → **Importar planilla**: descargá el modelo, completalo en Excel o Google Sheets, guardalo como CSV y subilo.
+Solo son obligatorios Nombre, Grupo (Adulto/Infantil) y Dojo. Las filas con errores se te informan para corregirlas; los alumnos
+ya creados no se duplican si volvés a importar.
+
 ## Cómo se protegen los datos
 - Contraseñas con *scrypt* (nunca en texto plano). Tras 5 intentos fallidos el usuario se bloquea 15 minutos.
 - Sesiones por cookie `HttpOnly`; se cierran al suspender a un alumno o cambiar su contraseña.

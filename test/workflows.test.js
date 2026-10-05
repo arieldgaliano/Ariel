@@ -228,3 +228,52 @@ test('respaldo: se descarga, se restaura y recupera datos y archivos', async () 
   assert.ok(!b.glossary.some(g => g.term === 'MarcaDeRespaldo'), 'volvió al estado del respaldo');
   assert.ok(fs.existsSync(path.join(app.dataDir, 'backups')), 'quedó copia de seguridad previa');
 });
+
+test('importar planilla: crea alumnos con clave inicial, reconoce nombres de dojo/cinturón y reporta filas con error', async () => {
+  admin = await as('sensei'); // el test de restaurar cerró las sesiones
+  const rows = [
+    { name: 'Importado Uno', group: 'Adulto', dojo: 'Dojo Norte', belt: 'Verde', birth: '20/05/1990', phone: '5493415550001' },
+    { name: 'Importada Dos', group: 'Infantil', dojo: 'central', belt: '', birth: '2015-03-02', guardian: 'Mamá Dos' },
+    { name: 'Sin Dojo', group: 'Adulto', dojo: 'Dojo Sur' },
+    { name: 'Cinturón Raro', group: 'Adulto', dojo: 'Central', belt: 'Arcoíris' },
+    { name: 'Fecha Mala', group: 'Adulto', dojo: 'Central', birth: '31/02/2000' },
+    { name: 'Importado Uno', group: 'Adulto', dojo: 'Dojo Norte', birth: '20/05/1990' },
+    { name: '', group: 'Adulto', dojo: 'Central' },
+  ];
+  const r = await admin.post('/api/students/import', { rows });
+  assert.equal(r.status, 201);
+  assert.equal(r.data.created, 2);
+  assert.equal(r.data.skipped.length, 5);
+  assert.deepEqual(r.data.skipped.map(x => x.row), [4, 5, 6, 7, 8]);
+  const uno = r.data.students.find(s => s.name === 'Importado Uno');
+  assert.equal(uno.dojo, 'norte'); assert.equal(uno.belt, 'adulto-verde'); assert.equal(uno.birth, '1990-05-20');
+  assert.equal(r.data.students.find(s => s.name === 'Importada Dos').belt, 'infantil-blanco');
+  const login = await new Client(app.base).post('/api/auth/login', { username: uno.username, password: 'karatedo123' });
+  assert.equal(login.data.mustChangePassword, true);
+  // reimportar no duplica
+  assert.equal((await admin.post('/api/students/import', { rows: rows.slice(0, 2) })).data.created, 0);
+  assert.equal((await as('martina.suarez').then(c => c.post('/api/students/import', { rows }))).status, 403);
+  assert.equal((await admin.post('/api/students/import', { rows: [] })).status, 400);
+});
+
+test('listo para rendir: el Sensei recibe las clases desde el último cinturón de cada alumno', async () => {
+  const b = (await admin.get('/api/bootstrap')).data;
+  const martina = b.students.find(s => s.username === 'martina.suarez');
+  assert.equal(typeof martina.classesSinceBelt, 'number');
+  const cnt = db.get().prepare('SELECT COUNT(*) AS n FROM attendance WHERE student_id = ? AND date >= ?').get(martina.id, martina.beltSince).n;
+  assert.equal(martina.classesSinceBelt, cnt);
+});
+
+test('gastos: el Sensei puede corregirlos y borrarlos; nadie más', async () => {
+  const e = (await admin.post('/api/expenses', { category: 'Otro', concept: 'Mal cargado', amount: 100, date: '2026-10-01', status: 'pendiente' })).data.expense;
+  const ivan = await as('ivan.castro');
+  assert.equal((await ivan.put(`/api/expenses/${e.id}`, { category: 'Otro', concept: 'x', amount: 1, date: '2026-10-01', status: 'pagado' })).status, 403);
+  assert.equal((await ivan.delete(`/api/expenses/${e.id}`)).status, 403);
+  const up = await admin.put(`/api/expenses/${e.id}`, { category: 'Material', concept: 'Corregido', amount: 250.5, date: '2026-10-02', status: 'pagado' });
+  assert.equal(up.status, 200);
+  assert.equal(up.data.expense.amount, 250.5);
+  assert.equal(up.data.expense.paidOn, '2026-10-02');
+  assert.equal((await admin.put(`/api/expenses/${e.id}`, { category: 'Inventada', concept: 'x', amount: 1, date: '2026-10-02', status: 'pagado' })).status, 400);
+  assert.equal((await admin.delete(`/api/expenses/${e.id}`)).status, 200);
+  assert.equal((await admin.delete(`/api/expenses/${e.id}`)).status, 404);
+});
