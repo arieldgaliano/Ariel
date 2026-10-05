@@ -413,3 +413,28 @@ img[hidden]{display:none !important;}
 .hp-field{position:absolute !important;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;}
 .pw-box{font-size:22px;font-weight:700;text-align:center;letter-spacing:.04em;background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius);padding:14px;margin:10px 0;user-select:all;}
 .loading-note{padding:40px 16px;text-align:center;color:var(--ink-soft);font-size:14px;}
+
+/* ---------- Mejoras de orden y de uso en celular ---------- */
+.nav-group{padding:16px 22px 4px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7F7160;}
+.nav-group:first-child{padding-top:6px;}
+.main{padding-bottom:90px;}  /* que el botón flotante no tape la última fila */
+@media (max-width:760px){
+  .nav-group{display:none;}
+  /* Cuenta siempre a mano: cambiar contraseña y cerrar sesión (antes quedaban escondidas) */
+  .sidebar-foot{display:flex !important;gap:14px;align-items:center;border-top:none;padding:0 10px 0 6px;flex:none;}
+  .sidebar-foot .who{display:none;}
+  .sidebar-foot .logout-link{white-space:nowrap;font-size:12px;margin:0;color:#B8A996;}
+  /* Tablas como tarjetas */
+  .table-wrap{border:none;overflow:visible;background:transparent;}
+  table.stack{display:block;width:100%;}
+  table.stack thead{display:none;}
+  table.stack tbody{display:block;}
+  table.stack tr{display:block;background:var(--paper-raised);border:1px solid var(--rule);border-radius:var(--radius);margin-bottom:10px;padding:6px 12px;}
+  table.stack td{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:6px 0;border:none !important;text-align:right;}
+  table.stack td::before{content:attr(data-label);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);text-align:left;flex-shrink:0;}
+  table.stack td[data-label=""]::before{display:none;}
+  table.stack td[data-label=""]{justify-content:center;text-align:center;}
+  table.stack td:last-child:not([data-label=""]){flex-wrap:wrap;justify-content:flex-end;border-top:1px solid var(--rule) !important;margin-top:4px;padding-top:10px;}
+  table.stack td:last-child:not([data-label=""])::before{display:none;}
+  table.stack td .name-cell{justify-content:flex-end;}
+}

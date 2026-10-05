@@ -1,6 +1,7 @@
 'use strict';
 const path = require('node:path');
 const express = require('express');
+const compression = require('compression');
 const config = require('./config');
 const db = require('./db');
 const security = require('./security');
@@ -86,6 +87,7 @@ function createApp() {
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
   app.use(securityHeaders);
+  app.use(compression()); // páginas y datos viajan comprimidos (mucho más rápido en celular)
 
   const api = express.Router();
   api.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });

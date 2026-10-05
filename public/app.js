@@ -357,19 +357,19 @@ function refreshBranding(){
    SHELL / NAV
 ============================================================ */
 const adminNav = [
-  {id:'resumen', label:'Resumen'},
-  {id:'alumnos', label:'Alumnos'},
-  {id:'asistencia', label:'Asistencia'},
-  {id:'pagos', label:'Cuotas y pagos'},
-  {id:'alquiler', label:'Gastos'},
-  {id:'programas', label:'Programas'},
-  {id:'cinturones', label:'Cinturones'},
-  {id:'cronograma', label:'Cronograma y actividades'},
-  {id:'diplomas', label:'Diplomas'},
-  {id:'biblioteca', label:'Biblioteca'},
-  {id:'foro', label:'Foro'},
-  {id:'inscripcion', label:'Ficha de inscripción'},
-  {id:'configuracion', label:'Configuración'},
+  {id:'resumen', label:'Resumen', group:'Gestión diaria'},
+  {id:'alumnos', label:'Alumnos', group:'Gestión diaria'},
+  {id:'asistencia', label:'Asistencia', group:'Gestión diaria'},
+  {id:'pagos', label:'Cuotas y pagos', group:'Gestión diaria'},
+  {id:'alquiler', label:'Gastos', group:'Gestión diaria'},
+  {id:'programas', label:'Programas', group:'Enseñanza'},
+  {id:'cinturones', label:'Cinturones', group:'Enseñanza'},
+  {id:'cronograma', label:'Cronograma y actividades', group:'Enseñanza'},
+  {id:'diplomas', label:'Diplomas', group:'Enseñanza'},
+  {id:'biblioteca', label:'Biblioteca', group:'Comunidad'},
+  {id:'foro', label:'Foro', group:'Comunidad'},
+  {id:'inscripcion', label:'Ficha de inscripción', group:'Comunidad'},
+  {id:'configuracion', label:'Configuración', group:'Sistema'},
 ];
 const instructorNav = [
   {id:'mi-programa', label:'Mi programa'},
@@ -409,7 +409,7 @@ function renderShell(){
 
   sidebar.innerHTML = `
     <div class="brand">${schoolLogo ? `<img src="${esc(schoolLogo)}" style="height:26px;max-width:150px;object-fit:contain">` : '<div class="dot"></div><span>Shuri-te Kan</span>'}</div>
-    <div class="nav-scroll">${nav.map((n,i)=>`<div class="nav-item ${i===0?'active':''}" data-nav="${n.id}" onclick="showPanel('${n.id}', this)">${n.label}</div>`).join('')}</div>
+    <div class="nav-scroll">${nav.map((n,i)=>`${n.group && n.group!==(nav[i-1]||{}).group ? `<div class="nav-group">${n.group}</div>` : ''}<div class="nav-item ${i===0?'active':''}" data-nav="${n.id}" onclick="showPanel('${n.id}', this)">${n.label}</div>`).join('')}</div>
     <div class="sidebar-foot">
       <div class="who">${who.name}<small>${who.sub}</small></div>
       <button class="logout-link" onclick="openChangePasswordModal()">Cambiar contraseña</button>
@@ -4114,6 +4114,20 @@ async function renderVerifyScreen(code){
   `;
 }
 window.addEventListener('hashchange', route);
+
+/* En pantallas chicas las tablas se muestran como tarjetas: cada celda lleva el nombre de su columna. */
+function labelTables(){
+  document.querySelectorAll('.table-wrap table:not(.sheet-table)').forEach(t=>{
+    const heads = [...t.querySelectorAll('thead th')].map(th=>th.textContent.replace(/[⇅▲▼]/g,'').trim());
+    t.querySelectorAll('tbody tr').forEach(tr=>{
+      [...tr.children].forEach((td,i)=>{ if(td.tagName==='TD' && !td.hasAttribute('data-label')) td.setAttribute('data-label', td.colSpan>1 ? '' : (heads[i]||'')); });
+    });
+    t.classList.add('stack');
+  });
+}
+let labelQueued = false;
+new MutationObserver(()=>{ if(labelQueued) return; labelQueued = true; requestAnimationFrame(()=>{ labelQueued = false; labelTables(); }); })
+  .observe(document.body, {childList:true, subtree:true});
 
 /* ============================================================
    ARRANQUE
