@@ -31,6 +31,7 @@ ya creados no se duplican si volvés a importar.
 ## Respaldos (importante)
 - Configuración → **Descargar respaldo completo (.zip)**: base de datos + fotos + comprobantes. Hacelo seguido y guardalo fuera del servidor (tu computadora, Drive).
 - El servidor guarda además un respaldo automático por día en `data/backups` (los últimos 14).
+- **Respaldo automático por correo:** Configuración → "Respaldo automático por correo". El Sensei carga un Gmail del dojo con una *contraseña de aplicación* (la pantalla explica cómo obtenerla) y el sistema envía el .zip a diario, por semana o por mes. Si falla, avisa en el Resumen. La contraseña se guarda encriptada (llave en `data/secret.key`, o variable `SECRET_KEY`).
 - Restaurar: Configuración → "Restaurar desde un respaldo", o por terminal `npm run restore -- archivo.zip` (con el servidor detenido).
 
 ## Publicarlo en internet (Docker)

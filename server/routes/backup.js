@@ -5,6 +5,8 @@ const backup = require('../backup');
 const perms = require('../permissions');
 const security = require('../security');
 const settings = require('../settings');
+const mailer = require('../mailer');
+const { v } = require('../validate');
 const S = require('../serialize');
 const { ApiError, todayIso } = require('../util');
 
@@ -50,6 +52,43 @@ r.get('/export', (req, res) => {
   security.audit(req, 'data_exported');
   res.set('Content-Disposition', `attachment; filename="shuritekan_datos_${todayIso()}.json"`);
   res.json(data);
+});
+
+// Respaldo automático por correo: el Sensei carga su cuenta (la contraseña se guarda encriptada y no se vuelve a mostrar).
+r.put('/email', (req, res) => {
+  const b = v.object(req.body);
+  const cur = mailer.getConfig();
+  const enabled = v.bool(b.enabled);
+  const user = v.str(b.user, 'Correo', { max: 120 });
+  const to = v.str(b.to, 'Enviar a', { max: 120 }) || user;
+  const isMail = x => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
+  if (enabled || user) { if (!isMail(user)) throw new ApiError(400, 'Correo: no es una dirección válida.'); }
+  if (to && !isMail(to)) throw new ApiError(400, 'Enviar a: no es una dirección válida.');
+  const host = v.str(b.host, 'Servidor', { max: 120 }) || mailer.DEFAULTS.host;
+  if (!/^[A-Za-z0-9.-]+$/.test(host)) throw new ApiError(400, 'Servidor: no es válido.');
+  const port = v.int(b.port || mailer.DEFAULTS.port, 'Puerto', { min: 1, max: 65535 });
+  if (![25, 465, 587].includes(port)) throw new ApiError(400, 'Puerto: usá 465 (recomendado) o 587.');
+  const everyDays = v.oneOf(Number(b.everyDays), 'Frecuencia', [1, 7, 30]);
+  const next = { ...cur, enabled, host, port, user, to, everyDays };
+  // Si no escribió contraseña nueva, se conserva la anterior (salvo que cambie de cuenta).
+  const pass = typeof b.pass === 'string' ? b.pass.replace(/\s+/g, '') : '';
+  if (pass) { if (pass.length > 200) throw new ApiError(400, 'Contraseña: es demasiado larga.'); next.passEnc = security.encryptSecret(pass); }
+  else if (user !== cur.user) next.passEnc = '';
+  if (enabled && !next.passEnc) throw new ApiError(400, 'Cargá la contraseña de aplicación del correo para activar el envío.');
+  mailer.saveConfig(next);
+  security.audit(req, 'backup_email_configured', 'settings', 'backupEmail', { enabled, user, to, everyDays });
+  res.json({ backupEmail: mailer.publicStatus() });
+});
+
+r.post('/email/test', async (req, res) => {
+  let result;
+  try { result = await mailer.sendBackupNow(); }
+  catch (err) {
+    if (err.friendly) return res.status(502).json({ error: err.message, backupEmail: mailer.publicStatus() });
+    throw err;
+  }
+  security.audit(req, 'backup_email_sent', 'settings', 'backupEmail');
+  res.json({ ...result, backupEmail: mailer.publicStatus() });
 });
 
 // Restaurar desde un respaldo .zip. Reemplaza todo, así que pide la contraseña otra vez.

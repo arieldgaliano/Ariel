@@ -100,4 +100,4 @@ function restoreFromZip(zipBuffer) {
   return { safetyFolder: safety };
 }
 
-module.exports = { createBackupZip, writeBackupFile, restoreFromZip, backupsDir };
+module.exports = { snapshotDb, createBackupZip, writeBackupFile, restoreFromZip, backupsDir };

@@ -277,3 +277,46 @@ test('gastos: el Sensei puede corregirlos y borrarlos; nadie más', async () => 
   assert.equal((await admin.delete(`/api/expenses/${e.id}`)).status, 200);
   assert.equal((await admin.delete(`/api/expenses/${e.id}`)).status, 404);
 });
+
+test('respaldo por correo: solo el Sensei; la clave se guarda encriptada y nunca se devuelve; se envía con adjunto', async () => {
+  admin = await as('sensei');
+  const mailer = require('../server/mailer');
+  const sent = [];
+  mailer.setTransportFactory(cfg => ({ sendMail: async m => { if (cfg.user === 'falla@x.com') { const e = new Error('Invalid login'); e.code = 'EAUTH'; throw e; } sent.push(m); } }));
+  const body = { enabled: true, user: 'dojo@gmail.com', pass: 'abcd efgh ijkl mnop', to: 'sensei@gmail.com', everyDays: 7 };
+  const ivan = await as('ivan.castro');
+  assert.equal((await ivan.put('/api/backup/email', body)).status, 403);
+  assert.equal((await ivan.post('/api/backup/email/test', {})).status, 403);
+  assert.equal((await admin.put('/api/backup/email', { ...body, user: 'no-es-mail' })).status, 400);
+  assert.equal((await admin.put('/api/backup/email', { ...body, pass: '' })).status, 400, 'activar exige contraseña');
+  const ok = await admin.put('/api/backup/email', body);
+  assert.equal(ok.status, 200);
+  assert.equal(ok.data.backupEmail.hasPassword, true);
+  assert.ok(!JSON.stringify(ok.data).includes('abcdefghijklmnop'));
+  const stored = db.get().prepare("SELECT value FROM settings WHERE key = 'backupEmail'").get().value;
+  assert.ok(!stored.includes('abcdefghijklmnop') && !stored.includes('abcd efgh'), 'encriptada en la base');
+  assert.ok(!JSON.stringify((await admin.get('/api/bootstrap')).data).includes('abcdefghijklmnop'));
+  // envío de prueba
+  const t = await admin.post('/api/backup/email/test', {});
+  assert.equal(t.status, 200);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].to, 'sensei@gmail.com');
+  assert.match(sent[0].attachments[0].filename, /^shuritekan_respaldo_.*\.zip$/);
+  assert.ok(sent[0].attachments[0].content.length > 1000);
+  assert.ok(t.data.backupEmail.lastOk);
+  // cambiar solo la frecuencia conserva la clave guardada
+  const keep = await admin.put('/api/backup/email', { ...body, pass: '', everyDays: 1 });
+  assert.equal(keep.data.backupEmail.hasPassword, true);
+  // programado: no se repite antes de tiempo, sí cuando venció
+  assert.equal(await mailer.runIfDue(Date.now() + 3600 * 1000), false);
+  assert.equal(await mailer.runIfDue(Date.now() + 25 * 3600 * 1000), true);
+  assert.equal(sent.length, 2);
+  // error de cuenta: mensaje claro y queda registrado
+  await admin.put('/api/backup/email', { ...body, user: 'falla@x.com' });
+  const bad = await admin.post('/api/backup/email/test', {});
+  assert.equal(bad.status, 502);
+  assert.match(bad.data.error, /contraseña de aplicación/);
+  assert.match(bad.data.backupEmail.lastError, /contraseña de aplicación/);
+  const swapped = await admin.put('/api/backup/email', { ...body, enabled: false, pass: '', user: 'otra@x.com' });
+  assert.equal(swapped.data.backupEmail.hasPassword, false, 'al cambiar de cuenta se pide la clave de nuevo');
+});

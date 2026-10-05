@@ -79,6 +79,7 @@ let pendingInscriptions = [];
 let issuedDiplomas = [];
 let nextDiplomaNumber = 1;
 let classesSinceBelt = 0;
+let backupEmail = null;       // estado del respaldo por correo (solo Sensei)
 let feeConfig = { cuotaAdulto:0, cuotaInfantil:0, examBoard:0, belt:0 };
 const defaultHeroPhoto = '/img/hero-default.jpg';
 let homeContent = { heroTitle:'', heroLead:'', nosotrosDesc:'', showActivities:true, showFilosofia:true, filosofiaText:'', heroPhoto:null, showVideo:false, videoUrl:'' };
@@ -120,6 +121,7 @@ async function loadAppData(){
   issuedDiplomas = d.issuedDiplomas || [];
   nextDiplomaNumber = d.nextDiplomaNumber || 1;
   classesSinceBelt = d.classesSinceBelt || 0;
+  backupEmail = d.backupEmail || null;
 }
 function upsertById(list, item){
   const i = list.findIndex(x=>x.id===item.id);
@@ -654,12 +656,20 @@ function renderResumen(){
         </tbody>
       </table>
     </div>
+    ${backupReminderHtml()}
     ${readyToExamHtml()}
     <h3 class="serif" style="font-size:15px;margin:24px 0 10px;">Próximos cumpleaños</h3>
     ${upcomingBirthdays().length ? `<div class="home-grid">${upcomingBirthdays().map(u=>`
       <div class="home-card">${avatarHtml(u.s,26)}<strong style="display:inline-block;margin-left:8px;">${esc(u.s.name)}</strong><div class="meta">${u.days===0?'¡Es hoy!':(u.days===1?'Mañana':'En '+u.days+' días')} · ${u.label}</div></div>
     `).join('')}</div>` : '<p style="color:var(--ink-soft);font-size:13.5px;">Nadie cumple años en los próximos 30 días.</p>'}
   `;
+}
+function backupReminderHtml(){
+  const b = backupEmail;
+  if(!b) return '';
+  if(b.lastError) return `<div class="info-card" style="margin-top:20px;border-left:3px solid var(--shu)"><strong>⚠ El respaldo por correo falló</strong><p style="margin:6px 0 0">${esc(b.lastError)} Revisalo en Configuración.</p></div>`;
+  if(!b.enabled) return `<div class="info-card" style="margin-top:20px"><strong>Todavía no tenés respaldo automático</strong><p style="margin:6px 0 0">Activá el envío por correo en Configuración para que tus datos estén a salvo aunque falle el servidor.</p></div>`;
+  return '';
 }
 function monthsBetween(fromIso, toIso){
   if(!fromIso || !toIso) return 0;
@@ -2986,6 +2996,41 @@ function renderConfiguracion(){
     </div>
 
     <div class="config-section">
+      <h3 class="serif">Respaldo automático por correo</h3>
+      <p class="d">El sistema se envía solo una copia completa a un correo del dojo. Así, aunque se rompa el servidor, tus datos están a salvo en tu mail.</p>
+      ${backupEmailStatusHtml()}
+      <div class="checkline"><input type="checkbox" id="be-enabled" ${backupEmail&&backupEmail.enabled?'checked':''}> <label for="be-enabled">Enviar el respaldo automáticamente</label></div>
+      <div class="grid2">
+        <div class="field"><label>Correo desde el que se envía (Gmail)</label><input type="email" id="be-user" value="${esc(backupEmail?backupEmail.user:'')}" placeholder="dojo@gmail.com" autocomplete="off"></div>
+        <div class="field"><label>Contraseña de aplicación</label><input type="password" id="be-pass" placeholder="${backupEmail&&backupEmail.hasPassword?'•••• guardada (dejá vacío para conservarla)':'16 letras que da Google'}" autocomplete="new-password"></div>
+        <div class="field"><label>Enviar el respaldo a</label><input type="email" id="be-to" value="${esc(backupEmail?backupEmail.to:'')}" placeholder="Por defecto, el mismo correo" autocomplete="off"></div>
+        <div class="field"><label>Frecuencia</label>
+          <select id="be-every">${[[1,'Todos los días'],[7,'Una vez por semana'],[30,'Una vez por mes']].map(([d,l])=>`<option value="${d}" ${(backupEmail?backupEmail.everyDays:7)===d?'selected':''}>${l}</option>`).join('')}</select>
+        </div>
+      </div>
+      <details style="margin:4px 0 12px;"><summary class="hint" style="cursor:pointer">Cómo obtener la contraseña de aplicación de Gmail</summary>
+        <ol class="hint" style="line-height:1.8;margin:8px 0 0 18px;">
+          <li>Entrá a <strong>myaccount.google.com</strong> con el Gmail del dojo → <strong>Seguridad</strong>.</li>
+          <li>Activá la <strong>Verificación en dos pasos</strong> (si no la tenés).</li>
+          <li>Buscá <strong>"Contraseñas de aplicaciones"</strong> (podés escribirlo en el buscador de la cuenta).</li>
+          <li>Poné un nombre, por ejemplo "Shuri-te Kan", y tocá <strong>Crear</strong>.</li>
+          <li>Google muestra un código de 16 letras: copialo y pegalo arriba (los espacios no importan). Solo se muestra una vez.</li>
+        </ol>
+      </details>
+      <details style="margin:0 0 12px;"><summary class="hint" style="cursor:pointer">Usar otro proveedor de correo (avanzado)</summary>
+        <div class="grid2" style="margin-top:8px;">
+          <div class="field"><label>Servidor SMTP</label><input type="text" id="be-host" value="${esc(backupEmail?backupEmail.host:'smtp.gmail.com')}"></div>
+          <div class="field"><label>Puerto (465 o 587)</label><input type="text" id="be-port" value="${backupEmail?backupEmail.port:465}"></div>
+        </div>
+      </details>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-dark" onclick="saveBackupEmail()">Guardar</button>
+        <button class="btn" onclick="sendBackupEmailNow()">Enviar respaldo ahora (prueba)</button>
+      </div>
+      <p class="hint" style="margin-top:10px;margin-bottom:0;">El respaldo lleva datos personales de los alumnos: usá un correo del dojo con verificación en dos pasos. La contraseña se guarda encriptada y no se vuelve a mostrar. Si el respaldo pesa más de 24 MB, se envía solo la base de datos.</p>
+    </div>
+
+    <div class="config-section">
       <h3 class="serif">Respaldo de datos</h3>
       <p class="d">Tus datos viven en la base del servidor. Descargá una copia completa (alumnos, pagos, asistencia, fotos, comprobantes y configuración) y guardala en un lugar seguro fuera del servidor. Además, el sistema guarda solo un respaldo por día en el propio servidor.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
@@ -3000,6 +3045,44 @@ function renderConfiguracion(){
       <p class="hint" style="margin:0;">Restaurar reemplaza TODO lo actual por lo que hay en el respaldo y te pide tu contraseña. Lo anterior queda guardado en el servidor por si te arrepentís.</p>
     </div>
   `;
+}
+function backupEmailStatusHtml(){
+  const b = backupEmail;
+  if(!b) return '';
+  const fmt = iso=>new Date(iso).toLocaleString('es-AR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  if(b.lastError) return `<div class="info-card" style="margin-bottom:14px;border-left:3px solid var(--shu)"><strong>El último envío falló</strong><p style="margin:6px 0 0">${esc(b.lastError)}</p></div>`;
+  if(b.lastOk) return `<div class="info-card" style="margin-bottom:14px"><strong>Último respaldo enviado: ${esc(fmt(b.lastOk))}</strong>${b.lastNote?`<p style="margin:6px 0 0">${esc(b.lastNote)}</p>`:''}</div>`;
+  return '<div class="info-card" style="margin-bottom:14px"><strong>Todavía no se envió ningún respaldo por correo.</strong></div>';
+}
+function backupEmailForm(){
+  return {
+    enabled: document.getElementById('be-enabled').checked,
+    user: document.getElementById('be-user').value.trim(),
+    pass: document.getElementById('be-pass').value,
+    to: document.getElementById('be-to').value.trim(),
+    everyDays: parseInt(document.getElementById('be-every').value),
+    host: document.getElementById('be-host').value.trim(),
+    port: parseInt(document.getElementById('be-port').value) || 465,
+  };
+}
+async function saveBackupEmail(){
+  const r = await api('PUT', '/backup/email', backupEmailForm());
+  backupEmail = r.backupEmail;
+  renderConfiguracion();
+  toast(backupEmail.enabled ? 'Respaldo por correo activado.' : 'Datos del correo guardados (envío automático desactivado).');
+}
+async function sendBackupEmailNow(){
+  await saveBackupEmail();
+  toast('Enviando el respaldo… puede tardar unos segundos.');
+  try{
+    const r = await api('POST', '/backup/email/test', {});
+    backupEmail = r.backupEmail;
+    renderConfiguracion();
+    toast(`Respaldo enviado a ${backupEmail.to || backupEmail.user} (${r.sizeMb<0.1 ? 'menos de 0,1' : String(r.sizeMb).replace('.',',')} MB).`);
+  }catch(e){
+    if(e instanceof ApiError && e.data && e.data.backupEmail){ backupEmail = e.data.backupEmail; renderConfiguracion(); }
+    throw e;
+  }
 }
 function downloadBackup(){
   window.location.href = '/api/backup/download';

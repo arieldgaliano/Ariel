@@ -4,6 +4,7 @@ const db = require('./db');
 const security = require('./security');
 const files = require('./files');
 const backup = require('./backup');
+const mailer = require('./mailer');
 const { seedReferenceData, ensureAdmin } = require('./bootstrap-data');
 const { createApp } = require('./app');
 
@@ -29,8 +30,11 @@ async function main() {
   const dailyBackup = () => {
     try { backup.writeBackupFile('auto'); } catch (e) { console.error('[respaldo automático]', e.message); }
   };
+  const emailBackup = () => mailer.runIfDue().catch(e => console.error('[respaldo por correo]', e.message));
   maintain();
   dailyBackup();
+  emailBackup();
+  setInterval(emailBackup, 3600 * 1000).unref();
   setInterval(maintain, 3600 * 1000).unref();
   setInterval(dailyBackup, 24 * 3600 * 1000).unref();
 

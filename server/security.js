@@ -139,6 +139,31 @@ function memoryLimiter({ windowMs, max, message }) {
   };
 }
 
+/* ---------------- Secretos guardados (p. ej. la clave del correo de respaldos) ----------------
+   Se encriptan con AES-256-GCM. La llave vive en un archivo aparte dentro de la carpeta de datos
+   (o en la variable SECRET_KEY) y NO viaja dentro de los respaldos. */
+const fs = require('node:fs');
+const path = require('node:path');
+function secretKey() {
+  if (process.env.SECRET_KEY) return crypto.createHash('sha256').update(process.env.SECRET_KEY).digest();
+  const file = path.join(config.dataDir, 'secret.key');
+  if (!fs.existsSync(file)) { fs.mkdirSync(config.dataDir, { recursive: true }); fs.writeFileSync(file, crypto.randomBytes(32).toString('base64'), { mode: 0o600 }); }
+  return Buffer.from(fs.readFileSync(file, 'utf8').trim(), 'base64');
+}
+function encryptSecret(text) {
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', secretKey(), iv);
+  const enc = Buffer.concat([c.update(String(text), 'utf8'), c.final()]);
+  return ['v1', iv.toString('base64'), c.getAuthTag().toString('base64'), enc.toString('base64')].join('.');
+}
+function decryptSecret(blob) {
+  const [v, iv, tag, enc] = String(blob || '').split('.');
+  if (v !== 'v1') throw new Error('secreto inválido');
+  const d = crypto.createDecipheriv('aes-256-gcm', secretKey(), Buffer.from(iv, 'base64'));
+  d.setAuthTag(Buffer.from(tag, 'base64'));
+  return Buffer.concat([d.update(Buffer.from(enc, 'base64')), d.final()]).toString('utf8');
+}
+
 /* ---------------- Auditoría ---------------- */
 function audit(req, action, entity, entityId, detail) {
   try {
@@ -149,7 +174,7 @@ function audit(req, action, entity, entityId, detail) {
 }
 
 module.exports = {
-  hashPassword, verifyPassword, burnTime, randomTempPassword, assertStrongEnough, MIN_PASSWORD,
+  encryptSecret, decryptSecret, hashPassword, verifyPassword, burnTime, randomTempPassword, assertStrongEnough, MIN_PASSWORD,
   createSession, lookupSession, destroySession, destroyUserSessions, purgeExpired, sha256,
   assertNotLocked, recordFailure, clearFailures, memoryLimiter, audit, uuid,
 };

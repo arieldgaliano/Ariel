@@ -45,6 +45,7 @@ r.get('/', perms.requireAuth, (req, res) => {
 
   if (a.isAdmin) {
     out.students = queries.allStudentsFull();
+    out.backupEmail = require('../mailer').publicStatus();
     out.fees = settings.get('fees');
     out.letterhead = settings.get('letterhead');
     out.theme = settings.get('theme');
