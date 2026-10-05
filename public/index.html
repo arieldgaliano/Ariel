@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shuri-te Kan · Gestión de dojo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1C1613">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Shuri-te Kan">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/img/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/img/icons/icon-192.png">
+<link rel="stylesheet" href="/app.css">
+<script src="/vendor/qrcode.min.js"></script>
+</head>
+<body>
+
+<div id="home-screen">
+  <div class="home-nav">
+    <div class="brand-mark">
+      <div class="hero-logo" style="width:38px;height:38px;box-shadow:none;"><img data-logo alt="Shuri-te Kan" hidden></div>
+      <span style="color:var(--ink);font-weight:700;letter-spacing:.04em;">SHURI-TE KAN</span>
+    </div>
+    <div class="home-nav-links">
+      <a href="#nosotros">Nosotros</a>
+      <a href="#filosofia" id="nav-link-filosofia">Filosofía</a>
+      <a href="#video-section" id="nav-link-video">Video</a>
+      <a href="#actividades" id="nav-link-actividades">Actividades</a>
+      <a href="#horarios">Horarios</a>
+      <a href="#contacto">Contacto</a>
+      <a href="#inscripcion">Sumate</a>
+    </div>
+    <a href="#login" class="btn-hero" style="padding:9px 18px;font-size:13px;">Iniciar sesión</a>
+  </div>
+
+  <div class="home-hero" id="home-hero">
+    <div class="home-hero-inner">
+      <div class="hero-logo"><img data-logo alt="Shuri-te Kan" hidden></div>
+      <div class="kanji-line">空手道 ・ 小林流 ・ 古武道</div>
+      <h1 id="home-hero-title">Karate-Do Shorin-ryu (Kobayashi-ryu) y Kobudo</h1>
+      <p class="lead" id="home-hero-lead">Clases para adultos e infantiles en Dojo Central y Dojo Norte. Disciplina, tradición y comunidad, cinturón a cinturón.</p>
+      <div class="cta-row">
+        <a href="#inscripcion" class="btn-hero">Ficha de inscripción</a>
+        <a href="#login" class="btn-hero-outline">Iniciar sesión</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="home-section" id="nosotros">
+    <p class="eyebrow">Nosotros</p>
+    <h2>Una escuela, dos dojos, un mismo camino</h2>
+    <p class="desc" id="home-nosotros-desc">Shuri-te Kan enseña Karate-Do Shorin-ryu (rama Kobayashi) y Kobudo, con clases separadas para adultos e infantiles en nuestros dos dojos. El programa avanza por examen de cinturón, con un cuerpo de instructores que acompaña cada etapa.</p>
+    <div id="home-belts"></div>
+  </div>
+
+  <div class="home-section dark" id="filosofia">
+    <p class="eyebrow">Filosofía</p>
+    <h2>Nuestros principios</h2>
+    <p class="desc" id="home-filosofia-text" style="white-space:pre-line;"></p>
+  </div>
+
+  <div class="home-section" id="video-section">
+    <p class="eyebrow">Video</p>
+    <h2>Conocé el dojo</h2>
+    <div id="home-video-wrap"></div>
+  </div>
+
+  <div class="home-section" id="actividades">
+    <p class="eyebrow">Actividades</p>
+    <h2>Exámenes, torneos y seminarios</h2>
+    <p class="desc">Además de las clases semanales, organizamos mesas de examen, torneos y seminarios a lo largo del año.</p>
+    <div class="home-grid" id="home-events"></div>
+  </div>
+
+  <div class="home-section dark" id="horarios">
+    <p class="eyebrow">Horarios</p>
+    <h2>Cronograma semanal</h2>
+    <p class="desc">Sumate a probar una clase en el horario y dojo que más te convenga.</p>
+    <div class="home-grid" id="home-schedule"></div>
+  </div>
+
+  <div class="home-section" id="contacto">
+    <p class="eyebrow">Contacto</p>
+    <h2>Encontranos</h2>
+    <div class="home-grid" id="home-contact"></div>
+  </div>
+
+  <div class="home-footer">
+    <span>Shuri-te Kan — Karate-Do Shorin-ryu y Kobudo</span>
+    <a href="#login">Iniciar sesión</a>
+  </div>
+</div>
+
+<div id="login-screen">
+  <div class="login-left" style="background-image:linear-gradient(165deg, rgba(28,22,19,.94), rgba(20,15,12,.90)), url('/img/hero-default.jpg');background-size:cover;background-position:center 32%;">
+    <div>
+      <div class="hero-mark">
+        <div class="hero-logo"><img data-logo alt="Shuri-te Kan" hidden></div>
+              </div>
+      <div class="kanji-line">空手道 ・ 小林流 ・ 古武道</div>
+      <h1>El registro del dojo, con la disciplina de siempre.</h1>
+      <div class="belt-strip">
+        <div style="background:var(--belt-blanco)"></div><div style="background:var(--belt-amarillo)"></div>
+        <div style="background:var(--belt-naranja)"></div><div style="background:var(--belt-verde)"></div>
+        <div style="background:var(--belt-azul)"></div><div style="background:var(--belt-purpura)"></div>
+        <div style="background:var(--belt-marron)"></div><div style="background:var(--belt-negro)"></div>
+      </div>
+      <p class="tag">Cuotas, asistencia, programas por cinturón, biblioteca y foro — para el sensei, los instructores y cada alumno.</p>
+    </div>
+    <div class="login-foot">Shuri-te Kan · Karate-Do Shorin-ryu y Kobudo</div>
+  </div>
+  <div class="login-right">
+    <div class="login-card">
+      <a href="#home" class="back-home">‹ Volver al sitio</a>
+      <h2 class="serif">Ingresar</h2>
+      <p class="sub">Elegí tu tipo de acceso.</p>
+      <div class="role-tabs">
+        <button id="tab-alumno" class="active" onclick="setLoginRole('alumno')">Senpai (先輩) / Kohai (後輩)</button>
+        <button id="tab-admin" onclick="setLoginRole('admin')">Sensei (先生)</button>
+      </div>
+
+      <div id="login-field-admin" class="hidden">
+        <div class="field">
+          <label>Usuario</label>
+          <input type="text" id="sensei-username" autocomplete="username" placeholder="Usuario del Sensei">
+        </div>
+        <div class="field"><label>Contraseña</label><input type="password" id="sensei-password" autocomplete="current-password"></div>
+      </div>
+
+      <div id="login-field-alumno">
+        <div class="field">
+          <label>Usuario</label>
+          <input type="text" id="senpai-username" autocomplete="username" placeholder="Tu usuario">
+        </div>
+        <div class="field"><label>Contraseña</label><input type="password" id="senpai-password" autocomplete="current-password"></div>
+        <a href="javascript:void(0)" class="back-home" style="margin-bottom:14px;display:inline-block;" onclick="openForgotPassword()">¿Olvidaste tu contraseña?</a>
+      </div>
+
+      <button class="btn-primary" id="login-btn" onclick="login()">Iniciar sesión</button>
+      <p class="demo-note" id="login-error" style="display:none;color:var(--shu-deep);"></p>
+    </div>
+  </div>
+</div>
+
+<div id="app-shell">
+  <div class="app-grid">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="main" id="main"></div>
+  </div>
+</div>
+
+<button class="fab-attendance" id="fab-attendance" onclick="openQuickAttendance()">
+  <span class="fab-icon">✓</span><span>Tomar asistencia</span>
+</button>
+
+<div id="inscripcion-screen">
+  <div class="insc-card" id="insc-card"></div>
+</div>
+
+<div id="verify-screen">
+  <div class="insc-card" id="verify-card"></div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="chart-tip" id="chart-tip" style="display:none"></div>
+
+<div id="print-area"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

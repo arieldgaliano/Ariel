@@ -1,0 +1,568 @@
+{
+ "students": [
+  {
+   "id": 1,
+   "name": "Martina Suárez",
+   "belt": "adulto-verde",
+   "since": "2023-03-01",
+   "birth": "1998-04-12",
+   "familyGroup": "",
+   "phone": "5493610000001",
+   "guardian": "",
+   "group": "adulto",
+   "dojo": "central",
+   "status": "activo",
+   "isInstructor": false,
+   "scholarship": {
+    "active": false,
+    "amount": 0
+   },
+   "activities": [
+    {
+     "id": "a1",
+     "type": "examen",
+     "activity": "Examen de 3º Kyu",
+     "date": "2023-02-20",
+     "place": "Dojo Central",
+     "instructor": "",
+     "notes": "",
+     "belt": "adulto-verde",
+     "result": "aprobado"
+    }
+   ],
+   "dni": "30111222",
+   "username": "martina.suarez",
+   "passwordHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+   "enabledModules": [
+    "mi-programa",
+    "mis-cuotas",
+    "mi-asistencia",
+    "biblioteca",
+    "foro",
+    "inscripcion"
+   ]
+  },
+  {
+   "id": 2,
+   "name": "Lucas Ferreyra",
+   "belt": "infantil-amarillo-naranja",
+   "since": "2024-08-10",
+   "birth": "2016-10-03",
+   "familyGroup": "",
+   "phone": "5493610000002",
+   "guardian": "Silvina Ferreyra",
+   "group": "infantil",
+   "dojo": "central",
+   "status": "activo",
+   "isInstructor": false,
+   "scholarship": {
+    "active": false,
+    "amount": 0
+   },
+   "activities": [
+    {
+     "id": "a1",
+     "type": "examen",
+     "activity": "Examen de 5º Kyu",
+     "date": "2024-08-03",
+     "place": "Dojo Central",
+     "instructor": "",
+     "notes": "",
+     "belt": "infantil-amarillo-naranja",
+     "result": "aprobado"
+    }
+   ],
+   "dni": "45222333",
+   "username": "lucas.ferreyra",
+   "passwordHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+   "enabledModules": [
+    "mi-programa",
+    "mis-cuotas",
+    "mi-asistencia",
+    "biblioteca",
+    "foro",
+    "inscripcion"
+   ]
+  },
+  {
+   "id": 3,
+   "name": "Iván Castro",
+   "belt": "adulto-dan1",
+   "since": "2019-02-15",
+   "birth": "1990-11-30",
+   "familyGroup": "",
+   "phone": "5493610000003",
+   "guardian": "",
+   "group": "adulto",
+   "dojo": "norte",
+   "status": "activo",
+   "isInstructor": true,
+   "scholarship": {
+    "active": false,
+    "amount": 0
+   },
+   "activities": [],
+   "dni": "28333444",
+   "username": "ivan.castro",
+   "passwordHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+   "enabledModules": [
+    "mi-programa",
+    "mis-cuotas",
+    "mi-asistencia",
+    "asistencia",
+    "pagos",
+    "biblioteca",
+    "foro",
+    "inscripcion"
+   ],
+   "modulePerms": {
+    "biblioteca": "write",
+    "asistencia": "write",
+    "pagos": "write",
+    "programas": "read",
+    "cinturones": "read"
+   }
+  },
+  {
+   "id": 4,
+   "name": "Sofía Aguirre",
+   "belt": "infantil-blanco",
+   "since": "2025-06-02",
+   "birth": "2018-10-08",
+   "familyGroup": "",
+   "phone": "5493610000004",
+   "guardian": "Pablo Aguirre",
+   "group": "infantil",
+   "dojo": "central",
+   "status": "activo",
+   "isInstructor": false,
+   "scholarship": {
+    "active": true,
+    "amount": 6000
+   },
+   "activities": [],
+   "dni": "46444555",
+   "username": "sofia.aguirre",
+   "passwordHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+   "enabledModules": [
+    "mi-programa",
+    "mis-cuotas",
+    "mi-asistencia",
+    "biblioteca",
+    "foro",
+    "inscripcion"
+   ]
+  },
+  {
+   "id": 5,
+   "name": "Bruno Medina",
+   "belt": "adulto-azul",
+   "since": "2022-11-20",
+   "birth": "1995-07-22",
+   "familyGroup": "",
+   "phone": "5493610000005",
+   "guardian": "",
+   "group": "adulto",
+   "dojo": "norte",
+   "status": "suspendido",
+   "isInstructor": false,
+   "scholarship": {
+    "active": false,
+    "amount": 0
+   },
+   "activities": [],
+   "dni": "27555666",
+   "username": "bruno.medina",
+   "passwordHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+   "enabledModules": [
+    "mi-programa",
+    "mis-cuotas",
+    "mi-asistencia",
+    "biblioteca",
+    "foro",
+    "inscripcion"
+   ]
+  },
+  {
+   "id": 6,
+   "name": "Camila Rojas",
+   "belt": "infantil-naranja",
+   "since": "2024-01-18",
+   "birth": "2017-10-15",
+   "familyGroup": "",
+   "phone": "5493610000006",
+   "guardian": "Marcela Rojas",
+   "group": "infantil",
+   "dojo": "norte",
+   "status": "activo",
+   "isInstructor": false,
+   "scholarship": {
+    "active": false,
+    "amount": 0
+   },
+   "activities": [
+    {
+     "id": "a1",
+     "type": "examen",
+     "activity": "Examen de 4º Kyu",
+     "date": "2024-01-10",
+     "place": "Dojo Norte",
+     "instructor": "",
+     "notes": "",
+     "belt": "infantil-naranja",
+     "result": "aprobado"
+    },
+    {
+     "id": "a2",
+     "type": "examen",
+     "activity": "Examen de 4º Kyu",
+     "date": "2023-11-05",
+     "place": "Dojo Norte",
+     "instructor": "",
+     "notes": "A mejorar: mawashi geri.",
+     "belt": "infantil-naranja",
+     "result": "no aprobado"
+    }
+   ],
+   "dni": "44666777",
+   "username": "camila.rojas",
+   "passwordHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+   "enabledModules": [
+    "mi-programa",
+    "mis-cuotas",
+    "mi-asistencia",
+    "biblioteca",
+    "foro",
+    "inscripcion"
+   ]
+  },
+  {
+   "id": 7,
+   "name": "Prof. Yamila Ortiz",
+   "belt": "adulto-dan3",
+   "since": "2015-05-01",
+   "birth": "1985-03-10",
+   "familyGroup": "",
+   "phone": "5493610000007",
+   "guardian": "",
+   "group": "adulto",
+   "dojo": "norte",
+   "status": "activo",
+   "isInstructor": true,
+   "scholarship": {
+    "active": false,
+    "amount": 0
+   },
+   "activities": [],
+   "dni": "25777888",
+   "username": "yamila.ortiz",
+   "passwordHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+   "enabledModules": [
+    "mi-programa",
+    "mis-cuotas",
+    "mi-asistencia",
+    "asistencia",
+    "pagos",
+    "biblioteca",
+    "foro",
+    "inscripcion"
+   ],
+   "modulePerms": {
+    "biblioteca": "write",
+    "asistencia": "write",
+    "pagos": "write",
+    "programas": "read",
+    "cinturones": "read"
+   }
+  }
+ ],
+ "payments": [
+  {
+   "id": "p1",
+   "studentId": 1,
+   "period": "Septiembre 2026",
+   "concept": "Cuota mensual",
+   "amount": 15000,
+   "status": "pendiente"
+  },
+  {
+   "id": "p2",
+   "studentId": 2,
+   "period": "Septiembre 2026",
+   "concept": "Cuota mensual",
+   "amount": 12000,
+   "status": "pagada",
+   "paidOn": "2026-09-03",
+   "method": "Transferencia",
+   "medium": "Electrónico"
+  },
+  {
+   "id": "p3",
+   "studentId": 3,
+   "period": "Septiembre 2026",
+   "concept": "Cuota mensual",
+   "amount": 15000,
+   "status": "pendiente"
+  },
+  {
+   "id": "p4",
+   "studentId": 4,
+   "period": "Septiembre 2026",
+   "concept": "Cuota mensual (becada)",
+   "amount": 6000,
+   "status": "pagada",
+   "paidOn": "2026-09-05",
+   "method": "Efectivo",
+   "medium": "Físico"
+  },
+  {
+   "id": "p5",
+   "studentId": 5,
+   "period": "Septiembre 2026",
+   "concept": "Cuota mensual",
+   "amount": 15000,
+   "status": "pendiente"
+  },
+  {
+   "id": "p6",
+   "studentId": 6,
+   "period": "Septiembre 2026",
+   "concept": "Cuota mensual",
+   "amount": 13000,
+   "status": "pagada",
+   "paidOn": "2026-09-02",
+   "method": "Mercado Pago",
+   "medium": "Electrónico"
+  },
+  {
+   "id": "p7",
+   "studentId": 1,
+   "period": "Agosto 2026",
+   "concept": "Cuota mensual",
+   "amount": 15000,
+   "status": "pagada",
+   "paidOn": "2026-08-04",
+   "method": "Efectivo",
+   "medium": "Físico"
+  },
+  {
+   "id": "p8",
+   "studentId": 3,
+   "period": "Septiembre 2026",
+   "concept": "Mesa de examen",
+   "amount": 20000,
+   "status": "revision",
+   "proofMedium": "Mercado Pago",
+   "proofNote": "Transferí desde la cuenta de mi mamá."
+  }
+ ],
+ "expenses": [
+  {
+   "id": "g1",
+   "category": "Alquiler",
+   "concept": "Alquiler del salón — Septiembre 2026",
+   "amount": 180000,
+   "date": "2026-09-01",
+   "status": "pendiente"
+  },
+  {
+   "id": "g2",
+   "category": "Alquiler",
+   "concept": "Alquiler del salón — Agosto 2026",
+   "amount": 175000,
+   "date": "2026-08-01",
+   "status": "pagado",
+   "paidOn": "2026-08-01"
+  },
+  {
+   "id": "g3",
+   "category": "Alquiler",
+   "concept": "Alquiler del salón — Julio 2026",
+   "amount": 175000,
+   "date": "2026-07-01",
+   "status": "pagado",
+   "paidOn": "2026-07-01"
+  },
+  {
+   "id": "g4",
+   "category": "Material",
+   "concept": "Compra de protectores y petos",
+   "amount": 45000,
+   "date": "2026-09-10",
+   "status": "pagado",
+   "paidOn": "2026-09-10"
+  },
+  {
+   "id": "g5",
+   "category": "Certificados de cinturón",
+   "concept": "Certificados — mesa de examen de septiembre",
+   "amount": 12000,
+   "date": "2026-09-15",
+   "status": "pendiente"
+  }
+ ],
+ "schedule": [
+  {
+   "day": "Lun",
+   "details": "Infantiles · Dojo Central 18:00 – 19:00"
+  },
+  {
+   "day": "Lun",
+   "details": "Adultos · Dojo Central 19:15 – 20:45"
+  },
+  {
+   "day": "Mar",
+   "details": "Infantiles · Dojo Norte 18:00 – 19:00"
+  },
+  {
+   "day": "Mié",
+   "details": "Adultos · Dojo Central 19:15 – 20:45"
+  },
+  {
+   "day": "Vie",
+   "details": "Clase general · Dojo Norte 18:30 – 20:00"
+  }
+ ],
+ "events": [
+  {
+   "id": "e1",
+   "type": "examen",
+   "title": "Mesa de examen — Verde a Azul y Marrón a Negro",
+   "date": "2026-09-27",
+   "notes": ""
+  },
+  {
+   "id": "e2",
+   "type": "seminario",
+   "title": "Seminario de Bunkai con invitado especial",
+   "date": "2026-10-04",
+   "notes": "Cupo limitado, avisar asistencia con anticipación."
+  },
+  {
+   "id": "e3",
+   "type": "actividad",
+   "title": "Entrenamiento conjunto Dojo Central + Dojo Norte",
+   "date": "2026-09-30",
+   "notes": ""
+  },
+  {
+   "id": "e4",
+   "type": "torneo",
+   "title": "Torneo Regional de Karate-Do",
+   "date": "2026-10-18",
+   "notes": "Categorías kata y kumite, inscripción previa."
+  }
+ ],
+ "attendance": {
+  "1": [
+   "2026-09-01",
+   "2026-09-03",
+   "2026-09-08",
+   "2026-09-10"
+  ],
+  "2": [
+   "2026-09-01",
+   "2026-09-08",
+   "2026-09-10"
+  ],
+  "3": [
+   "2026-09-03",
+   "2026-09-08"
+  ],
+  "4": [
+   "2026-09-01",
+   "2026-09-03",
+   "2026-09-08",
+   "2026-09-10"
+  ],
+  "5": [
+   "2026-09-01",
+   "2026-09-10"
+  ],
+  "6": [
+   "2026-09-01",
+   "2026-09-03",
+   "2026-09-08"
+  ],
+  "7": [
+   "2026-09-01",
+   "2026-09-03",
+   "2026-09-08",
+   "2026-09-10"
+  ]
+ },
+ "inscriptions": [
+  {
+   "id": "i1",
+   "name": "Tomás Ibáñez",
+   "birth": "2016-04-11",
+   "group": "infantil",
+   "dojo": "central",
+   "phone": "5493610000099",
+   "guardian": "Ana Ibáñez",
+   "notes": "Sin condiciones médicas."
+  }
+ ],
+ "glossary": [
+  {
+   "id": "g1",
+   "term": "Kata",
+   "def": "Secuencia formal y preestablecida de técnicas, practicada individualmente contra adversarios imaginarios."
+  },
+  {
+   "id": "g2",
+   "term": "Kumite",
+   "def": "Combate o práctica de técnicas con un compañero, de forma acordada o libre según el nivel."
+  },
+  {
+   "id": "g3",
+   "term": "Bunkai",
+   "def": "Análisis e interpretación práctica de las aplicaciones de movimientos de un kata."
+  },
+  {
+   "id": "g4",
+   "term": "Maai",
+   "def": "Distancia y tiempo correctos entre dos practicantes durante un intercambio."
+  }
+ ],
+ "links": [
+  {
+   "id": "l1",
+   "title": "Taikyoku Shodan — ejecución paso a paso",
+   "url": "https://youtube.com/",
+   "type": "video",
+   "desc": ""
+  },
+  {
+   "id": "l2",
+   "title": "Reglamento de la federación",
+   "url": "https://example.org/",
+   "type": "link",
+   "desc": ""
+  }
+ ],
+ "forum": [
+  {
+   "id": "f1",
+   "author": "Martina Suárez",
+   "role": "Alumno",
+   "text": "¿Alguien tiene el video de la clase del sábado? Quiero repasar el kata para el examen.",
+   "date": "2026-09-15"
+  },
+  {
+   "id": "f2",
+   "author": "Prof. Diego Peralta",
+   "role": "Instructor",
+   "text": "Recuerden traer protector bucal para las prácticas de kumite de esta semana.",
+   "date": "2026-09-16"
+  }
+ ],
+ "announcements": [
+  {
+   "id": "an1",
+   "title": "Receso de vacaciones de invierno",
+   "body": "No hay clases del 14 al 25 de julio. Retomamos el lunes 28 con el horario habitual.",
+   "date": "2026-07-01"
+  }
+ ]
+}
